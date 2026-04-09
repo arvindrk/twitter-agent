@@ -1,10 +1,15 @@
 {
   "name": "twitter-agent",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "dotenvx run -- bun run --hot src/index.ts",
+    "test:agents": "dotenvx run -- bun src/test-agents.ts",
+    "test:researcher": "dotenvx run -- bun src/test-agents.ts researcher",
+    "test:writer": "dotenvx run -- bun src/test-agents.ts writer",
+    "test:scheduler": "dotenvx run -- bun src/test-agents.ts scheduler"
   },
   "dependencies": {
     "@ai-sdk/xai": "^3.0.81",
+    "@dotenvx/dotenvx": "^1.61.0",
     "@mastra/core": "^1.23.0",
     "@mastra/duckdb": "^1.1.1",
     "@mastra/hono": "^1.4.1",
@@ -12,7 +17,9 @@
     "@mastra/loggers": "^1.1.0",
     "@mastra/memory": "^1.14.0",
     "@mastra/observability": "^1.7.3",
+    "@neondatabase/serverless": "^1.0.2",
     "@xdevplatform/xdk": "^0.5.0",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.12",
     "mastra": "^1.4.0",
     "zod": "^4"
@@ -20,6 +27,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^25.5.2",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
 }
