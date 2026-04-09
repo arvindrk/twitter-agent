@@ -6,7 +6,8 @@
     "test:researcher": "dotenvx run -- bun src/test-agents.ts researcher",
     "test:writer": "dotenvx run -- bun src/test-agents.ts writer",
     "test:scheduler": "dotenvx run -- bun src/test-agents.ts scheduler",
-    "test:workflow": "dotenvx run -- bun src/run-daily.ts"
+    "test:workflow": "dotenvx run -- bun src/run-daily.ts",
+    "test:post": "dotenvx run -- bun src/test-post.ts"
   },
   "dependencies": {
     "@ai-sdk/xai": "^3.0.81",
