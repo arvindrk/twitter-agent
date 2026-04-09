@@ -30,33 +30,6 @@ app.post("/test/post", async (c) => {
   }
 });
 
-app.post("/run/daily", async (c) => {
-  const workflow = mastra.getWorkflow("dailyWorkflow");
-  const run = await workflow.createRun();
-
-  // Blocks until the full pipeline completes (research → write → schedule).
-  // This can take 30-90s. For production use startAsync() and poll /run/:id.
-  const result = await run.start({ inputData: {} });
-
-  if (result.status === "success") {
-    const { scheduledPosts } = result.result;
-    return c.json({ ok: true, scheduledPosts });
-  }
-
-  const error = result.status === "failed" ? result.error : undefined;
-  console.error("Workflow failed:", result.status, error);
-  return c.json(
-    {
-      ok: false,
-      status: result.status,
-      error: error?.message,
-      stack: error?.stack,
-      steps: result.steps,
-    },
-    500,
-  );
-});
-
 serve(
   {
     fetch: app.fetch,
