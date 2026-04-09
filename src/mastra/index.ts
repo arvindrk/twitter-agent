@@ -8,9 +8,11 @@ import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } fr
 import { researcherAgent } from './agents/researcher-agent';
 import { writerAgent } from './agents/writer-agent';
 import { schedulerAgent } from './agents/scheduler-agent';
+import { dailyWorkflow } from './workflows/daily-workflow';
 
 
 export const mastra = new Mastra({
+  workflows: { dailyWorkflow },
   agents: { researcherAgent, writerAgent, schedulerAgent },
   storage: new MastraCompositeStore({
     id: 'composite-storage',
