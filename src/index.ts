@@ -7,19 +7,19 @@ import {
 } from "@mastra/hono";
 import { mastra } from "./mastra/index.js";
 import { publishTweet } from "./x/poster.js";
+import { automation } from "./routes/automation.js";
 
 const app = new Hono<{ Bindings: HonoBindings; Variables: HonoVariables }>();
 const server = new MastraServer({ app, mastra });
 
 await server.init();
 
-app.get("/", (c) => {
-  return c.text("Hello Hono!");
-});
+app.route("/cron", automation);
 
 app.post("/test/post", async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const text: string = body.text ?? `test post from x-agent — ${new Date().toISOString()}`;
+  const text: string =
+    body.text ?? `test post from x-agent — ${new Date().toISOString()}`;
 
   try {
     const result = await publishTweet(text);
@@ -46,8 +46,14 @@ app.post("/run/daily", async (c) => {
   const error = result.status === "failed" ? result.error : undefined;
   console.error("Workflow failed:", result.status, error);
   return c.json(
-    { ok: false, status: result.status, error: error?.message, stack: error?.stack, steps: result.steps },
-    500
+    {
+      ok: false,
+      status: result.status,
+      error: error?.message,
+      stack: error?.stack,
+      steps: result.steps,
+    },
+    500,
   );
 });
 
