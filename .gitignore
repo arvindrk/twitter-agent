@@ -1,6 +1,7 @@
 # deps
 node_modules/
-.env*
+.env
+.env.keys
 
 # mastra runtime databases
 mastra.db
