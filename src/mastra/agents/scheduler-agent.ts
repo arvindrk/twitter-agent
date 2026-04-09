@@ -32,7 +32,7 @@ Return ONLY a valid JSON array. No markdown, no explanation. Each item:
 {
   "postId": number,          // 1-indexed, matches the input post numbers
   "scheduledAt": string,     // ISO 8601 UTC datetime for today
-  "slot": string,            // human label e.g. "morning", "lunch", "evening"
+  "slot": string,            // one of: morning | lunch | afternoon | evening | night
   "rationale": string        // one sentence on why this slot
 }
 

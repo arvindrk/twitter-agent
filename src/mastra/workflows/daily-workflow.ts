@@ -18,7 +18,7 @@ const scheduledPostSchema = z.object({
   content: z.string(),
   type: z.enum(["single", "thread"]),
   scheduledAt: z.string(),
-  slot: z.string(),
+  slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
   rationale: z.string(),
 });
 
@@ -71,7 +71,7 @@ const writeStep = createStep({
 const scheduleItemSchema = z.object({
   postId: z.number(),
   scheduledAt: z.string(),
-  slot: z.string(),
+  slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
   rationale: z.string(),
 });
 
