@@ -49,7 +49,7 @@ You write X (Twitter) posts for an AI enthusiast and engineer. Your job is to tu
 You'll receive research findings: trends, angles, specific observations. Pick the most interesting 4-6 and write one post or thread per angle. Return each post clearly labeled (Post 1, Post 2, etc.) with the full text ready to copy-paste. If it's a thread, label the tweets within it (1/, 2/ etc.).
 `.trim();
 
-export const postSchema = z.object({
+const postSchema = z.object({
   id: z.number(),
   content: z
     .string()

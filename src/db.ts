@@ -5,14 +5,14 @@ import { eq, and, sql } from "drizzle-orm";
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
-export const postTypeEnum = pgEnum("post_type", ["single", "thread"]);
-export const postStatusEnum = pgEnum("post_status", [
+const postTypeEnum = pgEnum("post_type", ["single", "thread"]);
+const postStatusEnum = pgEnum("post_status", [
   "pending",
   "processing",
   "published",
   "failed",
 ]);
-export const timeSlotEnum = pgEnum("time_slot", [
+const timeSlotEnum = pgEnum("time_slot", [
   "morning",
   "lunch",
   "afternoon",
@@ -37,7 +37,7 @@ export const scheduledPosts = pgTable("scheduled_posts", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
 });
 
-export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+type ScheduledPost = typeof scheduledPosts.$inferSelect;
 
 // ── Client ────────────────────────────────────────────────────────────────────
 

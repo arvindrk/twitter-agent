@@ -2,7 +2,7 @@ import { runResearcher } from "./agents/researcher.js";
 import { runWriter, type Post } from "./agents/writer.js";
 import { runScheduler, type ScheduleItem } from "./agents/scheduler.js";
 
-export type ScheduledPost = Post & ScheduleItem;
+type ScheduledPost = Post & ScheduleItem;
 
 export async function runDailyWorkflow(): Promise<ScheduledPost[]> {
   const brief = await runResearcher(
@@ -20,12 +20,8 @@ export async function runDailyWorkflow(): Promise<ScheduledPost[]> {
       .join("\n\n")}`,
   );
 
-  return scheduleItems.map((item) => {
-    const post = posts.find((p) => p.id === item.postId) ?? {
-      content: "",
-      type: "single" as const,
-      id: item.postId,
-    };
-    return { ...post, ...item };
+  return scheduleItems.flatMap((item) => {
+    const post = posts.find((p) => p.id === item.postId);
+    return post ? [{ ...post, ...item }] : [];
   });
 }

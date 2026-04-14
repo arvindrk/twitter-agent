@@ -25,7 +25,7 @@ Developers, AI builders, founders — primarily US-based (EST/PST), with a secon
 6. Save more niche / technical posts for off-peak times
 `.trim();
 
-export const scheduleItemSchema = z.object({
+const scheduleItemSchema = z.object({
   postId: z.number(),
   scheduledAt: z.string(),
   slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
