@@ -1,13 +1,9 @@
 import { Hono } from "hono";
-import type { HonoBindings, HonoVariables } from "@mastra/hono";
-import { mastra } from "../mastra/index.js";
+import { runDailyWorkflow } from "../pipeline.js";
 import { insertScheduledPosts, claimPost, markPublished, markFailed } from "../db/queries.js";
 import { publishTweet } from "../x/poster.js";
 
-const automation = new Hono<{
-  Bindings: HonoBindings;
-  Variables: HonoVariables;
-}>();
+const automation = new Hono();
 
 // ── Secret token guard ────────────────────────────────────────────────────────
 
@@ -36,32 +32,19 @@ automation.get("/daily", async (c) => {
   // Fire and forget — do not await
   (async () => {
     try {
-      const workflow = mastra.getWorkflow("dailyWorkflow");
-      const run = await workflow.createRun();
-      const result = await run.start({ inputData: {} });
+      const { scheduledPosts } = await runDailyWorkflow();
+      console.log(`[cron/daily] Run ${runId} complete — ${scheduledPosts.length} posts scheduled`);
 
-      if (result.status === "success") {
-        const { scheduledPosts } = result.result;
-        console.log(`[cron/daily] Run ${runId} complete — ${scheduledPosts.length} posts scheduled`);
-
-        const rows = await insertScheduledPosts(
-          scheduledPosts.map((p: any) => ({
-            content: p.content,
-            type: p.type,
-            scheduledAt: new Date(p.scheduledAt),
-            slot: p.slot,
-            rationale: p.rationale,
-          })),
-        );
-        console.log(`[cron/daily] Persisted to Neon — ids: ${rows.map((r) => r.id).join(", ")}`);
-      } else {
-        const err = result.status === "failed" ? result.error : undefined;
-        console.error(
-          `[cron/daily] Run ${runId} failed:`,
-          result.status,
-          err?.message,
-        );
-      }
+      const rows = await insertScheduledPosts(
+        scheduledPosts.map((p) => ({
+          content: p.content,
+          type: p.type,
+          scheduledAt: new Date(p.scheduledAt),
+          slot: p.slot,
+          rationale: p.rationale,
+        })),
+      );
+      console.log(`[cron/daily] Persisted to Neon — ids: ${rows.map((r) => r.id).join(", ")}`);
     } catch (err: any) {
       console.error(`[cron/daily] Run ${runId} threw:`, err.message);
     }
