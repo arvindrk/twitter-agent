@@ -1,61 +1,36 @@
 # AGENTS.md
 
-You are a TypeScript developer experienced with the Mastra framework. You build AI agents, tools, workflows, and scorers. You follow strict TypeScript practices and always consult up-to-date Mastra documentation before making changes.
-
-## CRITICAL: Load `mastra` skill
-
-**BEFORE doing ANYTHING with Mastra, load the `mastra` skill FIRST.** Never rely on cached knowledge as Mastra's APIs change frequently between versions. Use the skill to read up-to-date documentation from `node_modules`.
+You are a TypeScript developer. You follow strict TypeScript practices and use the Vercel AI SDK (`ai` + `@ai-sdk/xai`) for all LLM interactions.
 
 ## Project Overview
 
-This is a **Mastra** project written in TypeScript. Mastra is a framework for building AI-powered applications and agents with a modern TypeScript stack. The Node.js runtime is `>=22.13.0`.
+An autonomous X (Twitter) posting system. A daily pipeline runs three sequential LLM calls (research → write → schedule) using xAI Grok models.
 
 ## Commands
 
 ```bash
-npm run dev # Start Mastra Studio at localhost:4111 (long-running, use a separate terminal)
-npm run build # Build a production-ready server
+npm run dev      # Start Hono server on port 3010 with hot reload
+npx tsc --noEmit # Verify changes compile
 ```
 
 ## Project Structure
 
-| Folder                 | Description                                                                                                                              |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/mastra`           | Entry point for all Mastra-related code and configuration.                                                                               |
-| `src/mastra/agents`    | Define and configure your agents - their behavior, goals, and tools.                                                                     |
-| `src/mastra/workflows` | Define multi-step workflows that orchestrate agents and tools together.                                                                  |
-| `src/mastra/tools`     | Create reusable tools that your agents can call                                                                                          |
-| `src/mastra/mcp`       | (Optional) Implement custom MCP servers to share your tools with external agents                                                         |
-| `src/mastra/scorers`   | (Optional) Define scorers for evaluating agent performance over time                                                                     |
-| `src/mastra/public`    | (Optional) Contents are copied into the `.build/output` directory during the build process, making them available for serving at runtime |
+| Path | Description |
+| ---- | ----------- |
+| `src/agents/` | LLM functions: `runResearcher`, `runWriter`, `runScheduler` |
+| `src/pipeline.ts` | Daily workflow: chains the three agents in sequence |
+| `src/routes/automation.ts` | Cron HTTP routes (`/cron/daily`, `/cron/execute-post`) |
+| `src/x/` | X (Twitter) OAuth1 client and tweet poster |
+| `src/db/` | Neon/Postgres schema, client, and query helpers |
+| `src/index.ts` | Hono server entry point |
 
-### Top-level files
+## Key patterns
 
-Top-level files define how your Mastra project is configured, built, and connected to its environment.
-
-| File                  | Description                                                                                                       |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `src/mastra/index.ts` | Central entry point where you configure and initialize Mastra.                                                    |
-| `.env.example`        | Template for environment variables - copy and rename to `.env` to add your secret [model provider](/models) keys. |
-| `package.json`        | Defines project metadata, dependencies, and available npm scripts.                                                |
-| `tsconfig.json`       | Configures TypeScript options such as path aliases, compiler settings, and build output.                          |
+- `generateText` for the researcher (uses `webSearch` + `xSearch` tools, `stopWhen: stepCountIs(N)` for multi-step)
+- `generateObject` for writer and scheduler (returns structured output via zod schema)
+- All models are from `@ai-sdk/xai` — researcher uses `xai.responses()` (Responses API), writer/scheduler use `xai()` (Chat Completions). Not interchangeable.
 
 ## Boundaries
 
-### Always do
-
-- Load the `mastra` skill before any Mastra-related work
-- Register new agents, tools, workflows, and scorers in `src/mastra/index.ts`
-- Use schemas for tool inputs and outputs
-- Run `npm run build` to verify changes compile
-
-### Never do
-
 - Never commit `.env` files or secrets
-- Never modify `node_modules` or Mastra's database files directly
-- Never hardcode API keys (always use environment variables)
-
-## Resources
-
-- [Mastra Documentation](https://mastra.ai/llms.txt)
-- [Mastra .well-known skills discovery](https://mastra.ai/.well-known/skills/index.json)
+- Never hardcode API keys
