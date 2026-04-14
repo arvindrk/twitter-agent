@@ -1,28 +1,18 @@
 /**
  * Standalone script to run the full daily workflow (research → write → schedule).
- * Run: bun run run:daily
+ * Run: bun src/run-daily.ts
  */
 
-import { mastra } from "./mastra";
+import { runDailyWorkflow } from './pipeline';
 
 async function main() {
-  console.log("Starting daily workflow...\n");
+  console.log('Starting daily workflow...\n');
 
-  const workflow = mastra.getWorkflow("dailyWorkflow");
-  const run = await workflow.createRun();
-  const result = await run.start({ inputData: {} });
+  const { scheduledPosts } = await runDailyWorkflow();
 
-  if (result.status !== "success") {
-    console.error("Workflow failed:", result.status);
-    if (result.status === "failed") console.error(result.error);
-    process.exit(1);
-  }
-
-  const { scheduledPosts } = result.result;
-
-  console.log(`\n${"=".repeat(60)}`);
+  console.log(`\n${'='.repeat(60)}`);
   console.log(`  SCHEDULED POSTS FOR TODAY (${new Date().toDateString()})`);
-  console.log(`${"=".repeat(60)}\n`);
+  console.log(`${'='.repeat(60)}\n`);
 
   const sorted = [...scheduledPosts].sort(
     (a, b) =>
@@ -30,17 +20,17 @@ async function main() {
   );
 
   for (const post of sorted) {
-    const time = new Date(post.scheduledAt).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "America/New_York",
+    const time = new Date(post.scheduledAt).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/New_York',
     });
     console.log(
       `[${time} EST] [${post.slot}] Post ${post.postId} (${post.type})`,
     );
     console.log(`Rationale: ${post.rationale}`);
     console.log(`\n${post.content}`);
-    console.log(`\n${"-".repeat(60)}\n`);
+    console.log(`\n${'-'.repeat(60)}\n`);
   }
 
   console.log(`Total posts scheduled: ${scheduledPosts.length}`);

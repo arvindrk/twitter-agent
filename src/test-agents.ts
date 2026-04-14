@@ -5,23 +5,19 @@
  * Requires XAI_API_KEY in your .env
  */
 
-import { researcherAgent } from './mastra/agents/researcher-agent';
-import { writerAgent } from './mastra/agents/writer-agent';
-import { schedulerAgent } from './mastra/agents/scheduler-agent';
+import { runResearcher } from './agents/researcher-agent';
+import { runWriter } from './agents/writer-agent';
+import { runScheduler } from './agents/scheduler-agent';
 
 const arg = process.argv[2] ?? 'all';
 
 async function testResearcher() {
   console.log('\n=== RESEARCHER AGENT ===\n');
-  const result = await researcherAgent.generate([
-    {
-      role: 'user',
-      content:
-        'Research trending AI topics on X and the web from the last 7 days. Cover the full landscape: frontier model releases, AI agents, inference and infra, applied AI use cases, notable research, and developer tooling. Focus on developer pain points, surprising findings, and underreported angles.',
-    },
-  ]);
-  console.log(result.text);
-  return result.text;
+  const brief = await runResearcher(
+    'Research trending AI topics on X and the web from the last 7 days. Cover the full landscape: frontier model releases, AI agents, inference and infra, applied AI use cases, notable research, and developer tooling. Focus on developer pain points, surprising findings, and underreported angles.',
+  );
+  console.log(brief);
+  return brief;
 }
 
 async function testWriter(researchBrief?: string) {
@@ -35,48 +31,34 @@ async function testWriter(researchBrief?: string) {
 - The "context window is all you need for memory" take is everywhere on X right now, and it's mostly wrong for anything stateful
 - Mercor is seeing a surge in AI engineer hiring demand but the bar for what counts as "AI experience" is all over the place`;
 
-  const result = await writerAgent.generate([
-    {
-      role: 'user',
-      content: input,
-    },
-  ]);
-  console.log(result.text);
-  return result.text;
+  const { posts } = await runWriter(input);
+  for (const post of posts) {
+    console.log(`\n--- Post ${post.id} [${post.type}] ---`);
+    console.log(post.content);
+  }
+  return posts;
 }
 
-async function testScheduler(drafts?: string) {
+async function testScheduler(posts?: Awaited<ReturnType<typeof testWriter>>) {
   console.log('\n=== SCHEDULER AGENT ===\n');
   const today = new Date().toISOString().split('T')[0];
-  const input =
-    drafts ??
-    `Today is ${today}. Here are 4 draft posts to schedule:
 
-Post 1: Single post — contrarian take on SWE-bench scores not translating to real codebases
-Post 2: Thread (3 tweets) — why most teams are running evals wrong
-Post 3: Single post — inference cost drop and what it means for architecture decisions made in 2023
-Post 4: Single post — observation on the "context window as memory" misconception`;
+  let userMessage: string;
+  if (posts) {
+    const formatted = posts.map((p) => `Post ${p.id} [${p.type}]:\n${p.content}`).join('\n\n');
+    userMessage = `Today is ${today}. Here are ${posts.length} draft posts to schedule:\n\n${formatted}`;
+  } else {
+    userMessage = `Today is ${today}. Here are 4 draft posts to schedule:
 
-  const result = await schedulerAgent.generate([
-    {
-      role: 'user',
-      content: input,
-    },
-  ]);
+Post 1 [single]: contrarian take on SWE-bench scores not translating to real codebases
+Post 2 [thread]: why most teams are running evals wrong
+Post 3 [single]: inference cost drop and what it means for architecture decisions made in 2023
+Post 4 [single]: observation on the "context window as memory" misconception`;
+  }
 
-  console.log('Raw output:\n', result.text);
-
-  // Parse and pretty-print the JSON schedule
-  try {
-    const schedule = JSON.parse(result.text);
-    console.log('\nParsed schedule:');
-    for (const item of schedule) {
-      console.log(
-        `  Post ${item.postId} → ${item.scheduledAt} [${item.slot}] — ${item.rationale}`,
-      );
-    }
-  } catch {
-    console.log('(Could not parse as JSON — model returned prose)');
+  const scheduleItems = await runScheduler(userMessage);
+  for (const item of scheduleItems) {
+    console.log(`  Post ${item.postId} → ${item.scheduledAt} [${item.slot}] — ${item.rationale}`);
   }
 }
 
@@ -89,9 +71,9 @@ async function main() {
     await testScheduler();
   } else {
     // Full pipeline: researcher → writer → scheduler
-    const research = await testResearcher();
-    const drafts = await testWriter(research);
-    await testScheduler(drafts);
+    const brief = await testResearcher();
+    const posts = await testWriter(brief);
+    await testScheduler(posts);
   }
 }
 

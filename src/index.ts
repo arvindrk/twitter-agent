@@ -1,20 +1,13 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import {
-  type HonoBindings,
-  type HonoVariables,
-  MastraServer,
-} from "@mastra/hono";
-import { mastra } from "./mastra/index.js";
 import { publishTweet } from "./x/poster.js";
 import { automation } from "./routes/automation.js";
 
-const app = new Hono<{ Bindings: HonoBindings; Variables: HonoVariables }>();
-const server = new MastraServer({ app, mastra });
-
-await server.init();
+const app = new Hono();
 
 app.route("/cron", automation);
+
+app.get("/", (c) => c.json({ ok: true }));
 
 app.post("/test/post", async (c) => {
   const body = await c.req.json().catch(() => ({}));
