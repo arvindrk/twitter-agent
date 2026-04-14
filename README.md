@@ -34,15 +34,15 @@ cp .env.example .env
 
 **Required environment variables:**
 
-| Variable                 | Description                          |
-| ------------------------ | ------------------------------------ |
-| `XAI_API_KEY`            | xAI API key for Grok models          |
-| `X_API_KEY`              | X OAuth1 API key                     |
-| `X_API_SECRET`           | X OAuth1 API secret                  |
-| `X_ACCESS_TOKEN`         | X OAuth1 access token                |
-| `X_ACCESS_TOKEN_SECRET`  | X OAuth1 access token secret         |
-| `DATABASE_URL`           | Neon Postgres connection string      |
-| `CRON_SECRET`            | Shared secret for cron HTTP routes   |
+| Variable                | Description                        |
+| ----------------------- | ---------------------------------- |
+| `XAI_API_KEY`           | xAI API key for Grok models        |
+| `X_API_KEY`             | X OAuth1 API key                   |
+| `X_API_SECRET`          | X OAuth1 API secret                |
+| `X_ACCESS_TOKEN`        | X OAuth1 access token              |
+| `X_ACCESS_TOKEN_SECRET` | X OAuth1 access token secret       |
+| `DATABASE_URL`          | Neon Postgres connection string    |
+| `CRON_SECRET`           | Shared secret for cron HTTP routes |
 
 ## Development
 
@@ -65,27 +65,10 @@ npm run test:cron:execute-post
 
 ## HTTP API
 
-| Method | Path                  | Description                                              |
-| ------ | --------------------- | -------------------------------------------------------- |
-| GET    | `/`                   | Health check                                             |
-| GET    | `/cron/daily`         | Trigger the full pipeline (async, returns 202)           |
-| POST   | `/cron/execute-post`  | Publish a scheduled post `{ postId: number }`            |
+| Method | Path                 | Description                                    |
+| ------ | -------------------- | ---------------------------------------------- |
+| GET    | `/`                  | Health check                                   |
+| GET    | `/cron/daily`        | Trigger the full pipeline (async, returns 202) |
+| POST   | `/cron/execute-post` | Publish a scheduled post `{ postId: number }`  |
 
 All cron routes require `x-cron-secret` header (or `?secret=` query param) matching `CRON_SECRET`.
-
-## Project structure
-
-```
-src/
-  agents/
-    researcher.ts   — web + X search → research brief
-    writer.ts       — brief → structured posts
-    scheduler.ts    — posts → schedule with timestamps
-  pipeline.ts       — orchestrates the three agents
-  db.ts             — schema, client, and query helpers
-  x.ts              — X OAuth1 client and tweet publisher
-  index.ts          — Hono server and all routes
-  run-daily.ts      — CLI script to run the pipeline locally
-  test-agents.ts    — per-agent and end-to-end test script
-  test-post.ts      — direct tweet publish test
-```
