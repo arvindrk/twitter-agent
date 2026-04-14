@@ -1,6 +1,6 @@
-import { generateObject } from 'ai';
-import { xai } from '@ai-sdk/xai';
-import { z } from 'zod';
+import { generateObject } from "ai";
+import { xai } from "@ai-sdk/xai";
+import { z } from "zod";
 
 const SYSTEM = `
 You are a scheduling assistant for a Twitter account in the voice AI / developer tools space.
@@ -28,20 +28,20 @@ Developers, AI builders, founders — primarily US-based (EST/PST), with a secon
 export const scheduleItemSchema = z.object({
   postId: z.number(),
   scheduledAt: z.string(),
-  slot: z.enum(['morning', 'lunch', 'afternoon', 'evening', 'night']),
+  slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
   rationale: z.string(),
 });
 
 export type ScheduleItem = z.infer<typeof scheduleItemSchema>;
 
-const schedulerOutputSchema = z.object({ scheduleItems: z.array(scheduleItemSchema) });
-
-export async function runScheduler(userMessage: string): Promise<ScheduleItem[]> {
-  const result = await generateObject({
-    model: xai('grok-4-1-fast-non-reasoning'),
+export async function runScheduler(
+  userMessage: string,
+): Promise<ScheduleItem[]> {
+  const { object } = await generateObject({
+    model: xai("grok-4-1-fast-non-reasoning"),
     system: SYSTEM,
-    messages: [{ role: 'user', content: userMessage }],
-    schema: schedulerOutputSchema,
+    messages: [{ role: "user", content: userMessage }],
+    schema: z.object({ scheduleItems: z.array(scheduleItemSchema) }),
   });
-  return result.object.scheduleItems;
+  return object.scheduleItems;
 }

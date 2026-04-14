@@ -1,51 +1,31 @@
-import { z } from 'zod';
-import { runResearcher } from './agents/researcher-agent';
-import { runWriter, postSchema } from './agents/writer-agent';
-import { runScheduler, scheduleItemSchema } from './agents/scheduler-agent';
+import { runResearcher } from "./agents/researcher.js";
+import { runWriter, type Post } from "./agents/writer.js";
+import { runScheduler, type ScheduleItem } from "./agents/scheduler.js";
 
-export const scheduledPostSchema = z.object({
-  postId: z.number(),
-  content: z.string(),
-  type: z.enum(['single', 'thread']),
-  scheduledAt: z.string(),
-  slot: z.enum(['morning', 'lunch', 'afternoon', 'evening', 'night']),
-  rationale: z.string(),
-});
+export type ScheduledPost = Post & ScheduleItem;
 
-export type ScheduledPost = z.infer<typeof scheduledPostSchema>;
-
-export async function runDailyWorkflow(): Promise<{ scheduledPosts: ScheduledPost[] }> {
-  // Step 1: Research
+export async function runDailyWorkflow(): Promise<ScheduledPost[]> {
   const brief = await runResearcher(
-    'Research trending AI topics on X and the web from the last 24 hours. Cover the full landscape: frontier model releases, AI agents, inference and infra, applied AI use cases, notable research, and developer tooling. Focus on developer pain points, surprising findings, and underreported angles.',
+    "Research trending AI topics on X and the web from the last 24 hours. Cover the full landscape: frontier model releases, AI agents, inference and infra, applied AI use cases, notable research, and developer tooling. Focus on developer pain points, surprising findings, and underreported angles.",
   );
 
-  // Step 2: Write
-  const { posts } = await runWriter(
+  const posts = await runWriter(
     `Here are today's research findings. Turn the most interesting 4-6 angles into posts.\n\n${brief}`,
   );
 
-  // Step 3: Schedule
-  const today = new Date().toISOString().split('T')[0];
-  const postsFormatted = posts
-    .map((p) => `Post ${p.id} [${p.type}]:\n${p.content}`)
-    .join('\n\n');
-
+  const today = new Date().toISOString().split("T")[0];
   const scheduleItems = await runScheduler(
-    `Today is ${today}. Here are ${posts.length} draft posts to schedule:\n\n${postsFormatted}`,
+    `Today is ${today}. Here are ${posts.length} draft posts to schedule:\n\n${posts
+      .map((p) => `Post ${p.id} [${p.type}]:\n${p.content}`)
+      .join("\n\n")}`,
   );
 
-  const scheduledPosts: ScheduledPost[] = scheduleItems.map((item) => {
-    const post = posts.find((p) => p.id === item.postId);
-    return {
-      postId: item.postId,
-      content: post?.content ?? '',
-      type: post?.type ?? 'single',
-      scheduledAt: item.scheduledAt,
-      slot: item.slot,
-      rationale: item.rationale,
+  return scheduleItems.map((item) => {
+    const post = posts.find((p) => p.id === item.postId) ?? {
+      content: "",
+      type: "single" as const,
+      id: item.postId,
     };
+    return { ...post, ...item };
   });
-
-  return { scheduledPosts };
 }

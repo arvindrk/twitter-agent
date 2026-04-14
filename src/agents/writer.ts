@@ -1,6 +1,6 @@
-import { generateObject } from 'ai';
-import { xai } from '@ai-sdk/xai';
-import { z } from 'zod';
+import { generateObject } from "ai";
+import { xai } from "@ai-sdk/xai";
+import { z } from "zod";
 
 const SYSTEM = `
 You write X (Twitter) posts for an AI enthusiast and engineer. Your job is to turn research findings into authentic, high-value posts that sound exactly like him, not like a brand account.
@@ -54,21 +54,19 @@ export const postSchema = z.object({
   content: z
     .string()
     .describe(
-      'Full post text, ready to publish. For threads, each tweet separated by \n---\n',
+      "Full post text, ready to publish. For threads, each tweet separated by \n---\n",
     ),
-  type: z.enum(['single', 'thread']),
+  type: z.enum(["single", "thread"]),
 });
 
 export type Post = z.infer<typeof postSchema>;
 
-const writerOutputSchema = z.object({ posts: z.array(postSchema) });
-
-export async function runWriter(userMessage: string): Promise<{ posts: Post[] }> {
-  const result = await generateObject({
-    model: xai('grok-4-latest'),
+export async function runWriter(userMessage: string): Promise<Post[]> {
+  const { object } = await generateObject({
+    model: xai("grok-4-latest"),
     system: SYSTEM,
-    messages: [{ role: 'user', content: userMessage }],
-    schema: writerOutputSchema,
+    messages: [{ role: "user", content: userMessage }],
+    schema: z.object({ posts: z.array(postSchema) }),
   });
-  return result.object;
+  return object.posts;
 }

@@ -1,5 +1,5 @@
-import { generateText, stepCountIs } from 'ai';
-import { xai, webSearch, xSearch } from '@ai-sdk/xai';
+import { generateText, stepCountIs } from "ai";
+import { xai, webSearch, xSearch } from "@ai-sdk/xai";
 
 const SYSTEM = `
 You are a research assistant that finds trending topics across the AI space for a Twitter content strategy.
@@ -34,15 +34,12 @@ Be specific. Cite actual posts, numbers, or quotes when you have them. Skip anyt
 `.trim();
 
 export async function runResearcher(userMessage: string): Promise<string> {
-  const result = await generateText({
-    model: xai.responses('grok-4-latest'),
+  const { text } = await generateText({
+    model: xai.responses("grok-4-latest"),
     system: SYSTEM,
-    messages: [{ role: 'user', content: userMessage }],
-    tools: {
-      webSearch: webSearch(),
-      xSearch: xSearch(),
-    },
+    messages: [{ role: "user", content: userMessage }],
+    tools: { webSearch: webSearch(), xSearch: xSearch() },
     stopWhen: stepCountIs(10),
   });
-  return result.text;
+  return text;
 }
