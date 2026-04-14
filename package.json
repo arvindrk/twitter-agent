@@ -10,21 +10,15 @@
     "test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'"
   },
   "dependencies": {
-    "@ai-sdk/xai": "^3.0.81",
+    "@ai-sdk/xai": "^2.0.0",
     "@dotenvx/dotenvx": "^1.61.0",
-    "@mastra/core": "^1.23.0",
-    "@mastra/duckdb": "^1.1.1",
-    "@mastra/hono": "^1.4.1",
-    "@mastra/libsql": "^1.8.0",
-    "@mastra/loggers": "^1.1.0",
-    "@mastra/memory": "^1.14.0",
-    "@mastra/observability": "^1.7.3",
+    "@hono/node-server": "^1.0.0",
     "@neondatabase/serverless": "^1.0.2",
     "@xdevplatform/xdk": "^0.5.0",
+    "ai": "^5.0.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.12",
-    "mastra": "^1.4.0",
-    "zod": "^4"
+    "zod": "^3"
   },
   "devDependencies": {
     "@types/bun": "latest",
