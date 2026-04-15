@@ -7,7 +7,8 @@
     "test:writer": "dotenvx run -- bun src/test-agents.ts writer",
     "test:scheduler": "dotenvx run -- bun src/test-agents.ts scheduler",
     "test:cron:daily": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X GET http://localhost:3010/cron/daily -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\"",
-    "test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'"
+    "test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'",
+    "test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\""
   },
   "dependencies": {
     "@ai-sdk/xai": "^2.0.0",
