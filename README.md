@@ -72,3 +72,16 @@ npm run test:cron:execute-post
 | POST   | `/cron/execute-post` | Publish a scheduled post `{ postId: number }`  |
 
 All cron routes require `x-cron-secret` header (or `?secret=` query param) matching `CRON_SECRET`.
+
+## Cron-job.org
+
+### Publish-Due Cron (cron-job.org)
+
+Create a second job on [cron-job.org](https://cron-job.org):
+
+- **URL:** `POST https://<your-vercel-url>/cron/execute-post`
+- **Headers:** `x-cron-secret: <CRON_SECRET>`, `Content-Type: application/json`
+- **Body:** empty
+- **Schedule:** every 30 minutes
+
+No body means scan mode: queries all `pending` posts with `scheduled_at <= NOW()` and publishes each.
