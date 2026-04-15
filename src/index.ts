@@ -6,6 +6,7 @@ import {
   claimPost,
   markPublished,
   markFailed,
+  getPostsDue,
 } from "./db.js";
 import { publishTweet } from "./x.js";
 
@@ -56,51 +57,75 @@ app.get("/cron/daily", async (c) => {
   return c.json({ ok: true, runId }, 202);
 });
 
-// Called by pg_cron for each due post. Atomically claims the row (pending →
-// processing) then publishes and updates status.
+// Called by cron-job.org every 30 min (no body → scan mode) or manually with
+// { postId } for single-post execution.
 app.post("/cron/execute-post", async (c) => {
   if (!isAuthorized(c.req.raw))
     return c.json({ ok: false, error: "Unauthorized" }, 401);
 
   const body = await c.req.json().catch(() => null);
-  if (!body || typeof body.postId !== "number")
-    return c.json(
-      { ok: false, error: "Body must include { postId: number }" },
-      400,
-    );
 
+  // ── Scan mode: no postId → execute all due posts ──────────────────────────
+  if (!body || typeof body.postId !== "number") {
+    const due = await getPostsDue();
+    console.log(`[cron/execute-post] Scan mode — ${due.length} due post(s)`);
+
+    let processed = 0;
+    let skipped = 0;
+    const failed: { id: number; error: string }[] = [];
+
+    for (const { id } of due) {
+      const post = await claimPost(id);
+      if (!post) {
+        skipped++;
+        continue;
+      }
+
+      if (post.type === "thread") {
+        await markFailed(post.id, "Thread publishing not yet implemented");
+        failed.push({ id: post.id, error: "Thread publishing not yet implemented" });
+        continue;
+      }
+
+      try {
+        const result = await publishTweet(post.content);
+        const tweetUrl = `https://x.com/i/web/status/${result.id}`;
+        await markPublished(post.id, result.id, tweetUrl);
+        console.log(`[cron/execute-post] Published post ${id} → tweet ${result.id}`);
+        processed++;
+      } catch (err: any) {
+        console.error(`[cron/execute-post] Failed post ${id}:`, err.message);
+        await markFailed(post.id, err.message);
+        failed.push({ id: post.id, error: err.message });
+      }
+    }
+
+    return c.json({ ok: true, processed, skipped, failed });
+  }
+
+  // ── Single-post mode: explicit postId ────────────────────────────────────
   const { postId } = body as { postId: number };
   console.log(`[cron/execute-post] Claiming post ${postId}`);
 
   const post = await claimPost(postId);
   if (!post) {
-    console.log(
-      `[cron/execute-post] Post ${postId} already claimed or not found — skipping`,
-    );
+    console.log(`[cron/execute-post] Post ${postId} already claimed or not found — skipping`);
     return c.json({ ok: true, status: "skipped" });
   }
 
   if (post.type === "thread") {
     await markFailed(post.id, "Thread publishing not yet implemented");
-    return c.json(
-      { ok: false, error: "Thread publishing not yet implemented" },
-      501,
-    );
+    return c.json({ ok: false, error: "Thread publishing not yet implemented" }, 501);
   }
 
   try {
     const result = await publishTweet(post.content);
     const tweetUrl = `https://x.com/i/web/status/${result.id}`;
     await markPublished(post.id, result.id, tweetUrl);
-    console.log(
-      `[cron/execute-post] Published post ${postId} → tweet ${result.id}`,
-    );
+    console.log(`[cron/execute-post] Published post ${postId} → tweet ${result.id}`);
     return c.json({ ok: true, tweetId: result.id, tweetUrl });
   } catch (err: any) {
-    console.error(
-      `[cron/execute-post] Failed to publish post ${postId}:`,
-      err.message,
-    );
+    console.error(`[cron/execute-post] Failed to publish post ${postId}:`, err.message);
     await markFailed(post.id, err.message);
     return c.json({ ok: false, error: err.message }, 500);
   }
