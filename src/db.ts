@@ -91,5 +91,6 @@ export function getPostsDue(): Promise<{ id: number }[]> {
         eq(scheduledPosts.status, "pending"),
         sql`${scheduledPosts.scheduledAt} <= NOW()`,
       ),
-    );
+    )
+    .orderBy(scheduledPosts.scheduledAt);
 }
