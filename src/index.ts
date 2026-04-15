@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { handle } from "hono/vercel";
 import { runDailyWorkflow } from "./pipeline.js";
 import {
   insertScheduledPosts,
@@ -131,6 +132,10 @@ app.post("/cron/execute-post", async (c) => {
   }
 });
 
-serve({ fetch: app.fetch, port: 3010 }, (info) =>
-  console.log(`Server is running on http://localhost:${info.port}`),
-);
+export default handle(app);
+
+if (!process.env.VERCEL) {
+  serve({ fetch: app.fetch, port: 3010 }, (info) =>
+    console.log(`Server is running on http://localhost:${info.port}`),
+  );
+}
