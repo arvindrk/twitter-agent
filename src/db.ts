@@ -92,5 +92,6 @@ export function getPostsDue(): Promise<{ id: number }[]> {
         sql`${scheduledPosts.scheduledAt} <= NOW()`,
       ),
     )
-    .orderBy(scheduledPosts.scheduledAt);
+    .orderBy(scheduledPosts.scheduledAt)
+    .limit(5);
 }
