@@ -56,7 +56,7 @@ const postSchema = z.object({
     .describe(
       "Full post text, ready to publish. For threads, each tweet separated by \n---\n",
     ),
-  type: z.enum(["single", "thread"]),
+  type: z.enum(["single"]),
 });
 
 export type Post = z.infer<typeof postSchema>;
