@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+.git
+*.md
+docs/
+drizzle/
+api/
+plans/
+superpowers/
+skills-lock.json
+vercel.json
+package-lock.json
