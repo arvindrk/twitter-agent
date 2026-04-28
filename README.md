@@ -80,6 +80,14 @@ All cron routes require `x-cron-secret` header (or `?secret=` query param) match
 
 ## Cron-job.org
 
+### Daily Pipeline (cron-job.org)
+
+Create a job on [cron-job.org](https://cron-job.org) to trigger the full pipeline once per day:
+
+- **URL:** `GET https://<your-vercel-url>/cron/daily`
+- **Headers:** `x-cron-secret: <CRON_SECRET>`
+- **Schedule:** once daily (e.g. `0 12 * * *` for noon UTC)
+
 ### Publish-Due Cron (cron-job.org)
 
 Create a second job on [cron-job.org](https://cron-job.org):
