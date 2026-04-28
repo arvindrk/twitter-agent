@@ -5,7 +5,7 @@ Autonomous X (Twitter) posting system. Runs a daily pipeline that researches tre
 ## Pipeline
 
 ```
-researcher → writer → scheduler → neon DB → pg_cron → X API
+Hono (GET /cron/daily) → researcher → writer → scheduler → Neon DB → pg_cron → X API
 ```
 
 1. **Researcher** — searches X and the web for AI news, model releases, infra patterns, and developer tooling from the last 24 hours. Produces a research brief with 5–8 content angles. Uses `grok-4-latest` via the Responses API with `webSearch` and `xSearch` tools.
