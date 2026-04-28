@@ -43,11 +43,14 @@ export async function runResearcher(userMessage: string): Promise<string> {
     onStepFinish({ toolCalls }) {
       for (const call of toolCalls) {
         const query =
-          (call.input as Record<string, unknown>)?.query ?? "(no query)";
+          (call.input as Record<string, unknown>)?.query ??
+          "(query not available in AI sdk)";
         console.log(`[researcher] ${call.toolName}("${query}")`);
       }
     },
   });
-  console.log(`[researcher] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
+  console.log(
+    `[researcher] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
+  );
   return text;
 }
