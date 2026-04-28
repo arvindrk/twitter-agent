@@ -5,8 +5,8 @@ on:
     branches: [main]
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: twitter-agent
+  AWS_REGION: us-east-2
+  ECR_REPOSITORY: twitter/agent
 
 jobs:
   deploy:
@@ -33,7 +33,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker buildx build --platform linux/amd64 -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker tag $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY/$ECR_REPOSITORY:latest
           docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $REGISTRY/$ECR_REPOSITORY:latest

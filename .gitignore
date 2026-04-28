@@ -10,3 +10,4 @@ mastra.db-wal
 mastra.duckdb
 mastra.duckdb.wal
 .vercel
+*.pem
