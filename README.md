@@ -23,6 +23,7 @@ Posts are persisted to Neon and published via `pg_cron` calling `/cron/execute-p
 - **[Hono](https://hono.dev)** — HTTP server
 - **[Neon](https://neon.tech)** + **[Drizzle ORM](https://orm.drizzle.team)** — Postgres storage
 - **[X API (XDK)](https://developer.x.com)** — tweet publishing via OAuth1
+- **[pg_cron](https://neon.tech/docs/extensions/pg_cron)** — Postgres-native cron that calls `/cron/execute-post` to publish due posts
 
 ## Setup
 
