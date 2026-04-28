@@ -1,6 +1,7 @@
 import { generateObject } from "ai";
 import { xai } from "@ai-sdk/xai";
 import { z } from "zod";
+import { sanitizeContent } from "../utils/sanitize.js";
 
 const SYSTEM = `
 You write X (Twitter) posts for an AI enthusiast and engineer. Your job is to turn research findings into authentic, high-value posts that sound exactly like him, not like a brand account.
@@ -67,7 +68,15 @@ export async function runWriter(userMessage: string): Promise<Post[]> {
     messages: [{ role: "user", content: userMessage }],
     schema: z.object({ posts: z.array(postSchema) }),
   });
-  console.log(`[writer] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
-  object.posts.forEach((p) => console.log(`[writer] post ${p.id} [${p.type}] ${p.content.length}c`));
-  return object.posts;
+  console.log(
+    `[writer] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
+  );
+  const posts = object.posts.map((p) => ({
+    ...p,
+    content: sanitizeContent(p.content),
+  }));
+  posts.forEach((p) =>
+    console.log(`[writer] post ${p.id} [${p.type}] ${p.content.length}c`),
+  );
+  return posts;
 }
