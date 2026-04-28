@@ -8,7 +8,7 @@ Autonomous X (Twitter) posting system. Runs a daily pipeline that researches tre
 Hono (GET /cron/daily) → researcher → writer → scheduler → Neon DB → pg_cron → X API
 ```
 
-1. **Researcher** — searches X and the web for AI news, model releases, infra patterns, and developer tooling from the last 24 hours. Produces a research brief with 5–8 content angles. Uses `grok-4-latest` via the Responses API with `webSearch` and `xSearch` tools.
+1. **Researcher** — searches X and the web for AI news, model releases, infra patterns, and developer tooling from the last 24 hours. Produces a research brief with 5–8 content angles. Uses `grok-4-latest` via the Responses API with `webSearch` and `xSearch` tools (`stopWhen: stepCountIs(10)` for multi-step tool use).
 
 2. **Writer** — turns the brief into 4–6 X posts (single tweets or threads). Practical, builder-focused voice: no hype, no emojis, no em dashes. Uses `grok-4-latest` with structured output.
 
