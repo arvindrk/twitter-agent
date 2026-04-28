@@ -30,6 +30,7 @@ Posts are persisted to Neon and published via `pg_cron` calling `/cron/execute-p
 npm install
 cp .env.example .env
 # Fill in API keys
+npx drizzle-kit push
 ```
 
 **Required environment variables:**
