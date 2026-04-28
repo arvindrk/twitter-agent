@@ -59,6 +59,9 @@ npm run test:scheduler
 # Run the full pipeline end-to-end
 npm run test:agents
 
+# Verify TypeScript compiles
+npx tsc --noEmit
+
 # Trigger cron routes manually
 npm run test:cron:daily
 npm run test:cron:execute-post
