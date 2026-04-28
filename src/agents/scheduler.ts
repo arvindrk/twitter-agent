@@ -37,11 +37,15 @@ export type ScheduleItem = z.infer<typeof scheduleItemSchema>;
 export async function runScheduler(
   userMessage: string,
 ): Promise<ScheduleItem[]> {
-  const { object } = await generateObject({
+  const { object, usage } = await generateObject({
     model: xai("grok-4-1-fast-non-reasoning"),
     system: SYSTEM,
     messages: [{ role: "user", content: userMessage }],
     schema: z.object({ scheduleItems: z.array(scheduleItemSchema) }),
   });
+  console.log(`[scheduler] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
+  object.scheduleItems.forEach((s) =>
+    console.log(`[scheduler] post ${s.postId} → ${s.slot} @ ${s.scheduledAt}`),
+  );
   return object.scheduleItems;
 }

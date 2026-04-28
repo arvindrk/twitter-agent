@@ -34,12 +34,20 @@ Be specific. Cite actual posts, numbers, or quotes when you have them. Skip anyt
 `.trim();
 
 export async function runResearcher(userMessage: string): Promise<string> {
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: xai.responses("grok-4-latest"),
     system: SYSTEM,
     messages: [{ role: "user", content: userMessage }],
     tools: { webSearch: webSearch(), xSearch: xSearch() },
     stopWhen: stepCountIs(10),
+    onStepFinish({ toolCalls }) {
+      for (const call of toolCalls) {
+        const query =
+          (call.input as Record<string, unknown>)?.query ?? "(no query)";
+        console.log(`[researcher] ${call.toolName}("${query}")`);
+      }
+    },
   });
+  console.log(`[researcher] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
   return text;
 }

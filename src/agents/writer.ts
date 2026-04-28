@@ -61,11 +61,13 @@ const postSchema = z.object({
 export type Post = z.infer<typeof postSchema>;
 
 export async function runWriter(userMessage: string): Promise<Post[]> {
-  const { object } = await generateObject({
+  const { object, usage } = await generateObject({
     model: xai("grok-4-latest"),
     system: SYSTEM,
     messages: [{ role: "user", content: userMessage }],
     schema: z.object({ posts: z.array(postSchema) }),
   });
+  console.log(`[writer] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
+  object.posts.forEach((p) => console.log(`[writer] post ${p.id} [${p.type}] ${p.content.length}c`));
   return object.posts;
 }

@@ -5,6 +5,11 @@ services:
     env_file: .env
     ports:
       - "127.0.0.1:3010:3010"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-files: "5"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3010/"]
       interval: 30s
