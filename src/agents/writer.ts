@@ -26,7 +26,7 @@ You write X (Twitter) posts for an AI enthusiast and engineer. Your job is to tu
 
 ## Format rules
 
-- Single posts: max 280 chars. Count carefully.
+- Single posts: HARD LIMIT 280 characters. The 'content' field must be ≤280 chars. Count before writing. Cut ruthlessly.
 - Threads: 3-6 tweets. Number them (1/, 2/, etc.) only if it helps, often it doesn't.
 - No bullet-point threads. Prose or short statements, not listicles.
 - Hashtags: 0-1 max, only if obviously relevant. Never at the end like an afterthought.
@@ -53,9 +53,8 @@ const postSchema = z.object({
   id: z.number(),
   content: z
     .string()
-    .describe(
-      "Full post text, ready to publish. For threads, each tweet separated by \n---\n",
-    ),
+    .max(280)
+    .describe("Full post text, ready to publish. Must be ≤280 characters."),
   type: z.enum(["single"]),
 });
 
