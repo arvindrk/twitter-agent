@@ -80,33 +80,24 @@ All cron routes require `x-cron-secret` header or `?secret=` query param matchin
 ### Infrastructure
 
 - EC2 t3.micro, Ubuntu 22.04, `us-east-2`
-- Docker image stored in Amazon ECR (`762595420880.dkr.ecr.us-east-2.amazonaws.com/twitter/agent`)
+- Docker image stored in Amazon ECR
 - Nginx reverse proxy: port 80 → 3010
 - systemd unit auto-starts Docker Compose on reboot
 
 ### CI/CD (GitHub Actions)
 
 Every push to `main` triggers `.github/workflows/deploy.yml`:
+
 1. Builds `linux/amd64` Docker image
 2. Pushes to ECR (tagged with git SHA + `latest`)
 3. SSH deploys to EC2: `docker compose pull && up -d`
-
-**Required GitHub Actions secrets:**
-
-| Secret                  | Value                                                    |
-| ----------------------- | -------------------------------------------------------- |
-| `AWS_ACCESS_KEY_ID`     | IAM user with `AmazonEC2ContainerRegistryPowerUser`      |
-| `AWS_SECRET_ACCESS_KEY` | IAM user secret                                          |
-| `EC2_HOST`              | `ec2-3-145-5-8.us-east-2.compute.amazonaws.com`         |
-| `EC2_SSH_KEY`           | Contents of `ssh-key.pem`                                |
-| `ECR_REGISTRY`          | `762595420880.dkr.ecr.us-east-2.amazonaws.com`          |
 
 ### Manual deploy (first time or from local)
 
 ```bash
 # Build and push amd64 image
-aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 762595420880.dkr.ecr.us-east-2.amazonaws.com
-docker buildx build --platform linux/amd64 -t 762595420880.dkr.ecr.us-east-2.amazonaws.com/twitter/agent:latest --push .
+aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin <AWS_ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com
+docker buildx build --platform linux/amd64 -t <AWS_ACCOUNT_ID>.dkr.ecr.us-east-2.amazonaws.com/twitter/agent:latest --push .
 
 # On EC2
 cd ~/twitter-agent
@@ -117,14 +108,14 @@ docker compose pull && docker compose up -d
 
 ### Daily Pipeline
 
-- **URL:** `GET http://3.145.5.8/cron/daily`
+- **URL:** `GET http://<EC2_IP>/cron/daily`
 - **Header:** `x-cron-secret: <CRON_SECRET>`
 - **Schedule:** once daily (e.g. `0 12 * * *` for noon UTC)
 - **Timeout:** 10s (route returns 202 immediately, pipeline runs async)
 
 ### Publish Due Posts
 
-- **URL:** `POST http://3.145.5.8/cron/execute-post`
+- **URL:** `POST http://<EC2_IP>/cron/execute-post`
 - **Headers:** `x-cron-secret: <CRON_SECRET>`, `Content-Type: application/json`
 - **Body:** empty (scan mode — publishes all pending posts with `scheduled_at <= NOW()`)
 - **Schedule:** every 30 minutes
