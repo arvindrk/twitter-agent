@@ -1,4 +1,4 @@
-# twitter-agent
+# Twitter Agent
 
 Autonomous X (Twitter) posting system. Runs a daily pipeline that researches trending AI topics, writes developer-focused posts, and schedules them throughout the day.
 
