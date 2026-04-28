@@ -45,7 +45,7 @@ jobs:
           chmod 400 /tmp/ec2_key.pem
           ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ubuntu@${{ secrets.EC2_HOST }} \
             "cd ~/twitter-agent && \
-             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }} && \
+             aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }} && \
              ECR_IMAGE=${{ steps.build.outputs.image }} docker compose pull && \
              ECR_IMAGE=${{ steps.build.outputs.image }} docker compose up -d && \
              docker image prune -f"
