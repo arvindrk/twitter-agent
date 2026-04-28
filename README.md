@@ -89,7 +89,7 @@ Create a job on [cron-job.org](https://cron-job.org) to trigger the full pipelin
 - **Headers:** `x-cron-secret: <CRON_SECRET>`
 - **Schedule:** once daily (e.g. `0 12 * * *` for noon UTC)
 
-### Publish-Due Cron (cron-job.org)
+### Publish-Due
 
 Create a second job on [cron-job.org](https://cron-job.org):
 
