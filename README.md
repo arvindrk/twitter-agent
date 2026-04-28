@@ -1,6 +1,6 @@
 # Twitter Agent
 
-Autonomous X (Twitter) posting system. Runs a daily pipeline that researches trending AI topics, writes developer-focused posts, and schedules them throughout the day.
+Autonomous X (Twitter) posting system. Runs a daily pipeline that researches trending AI topics, writes developer-focused posts, and schedules them throughout the day. Built with Vercel AI SDK and xAI Grok.
 
 ## Pipeline
 
