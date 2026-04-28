@@ -68,6 +68,7 @@ npm run test:cron:execute-post
 | Method | Path                 | Description                                    |
 | ------ | -------------------- | ---------------------------------------------- |
 | GET    | `/`                  | Health check                                   |
+| POST   | `/test/post`         | Publish a tweet directly `{ text: string }`    |
 | GET    | `/cron/daily`        | Trigger the full pipeline (async, returns 202) |
 | POST   | `/cron/execute-post` | Publish a scheduled post `{ postId: number }`  |
 
