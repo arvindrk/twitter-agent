@@ -1,11 +1,11 @@
 /**
  * Test the pipeline stages individually or end-to-end.
- * Usage: bun src/test-agents.ts [researcher|writer|scheduler|all]
+ * Usage: bun scripts/test-agents.ts [researcher|writer|scheduler|all]
  */
 
-import { runResearcher } from "./agents/researcher";
-import { runWriter } from "./agents/writer";
-import { runScheduler } from "./agents/scheduler";
+import { runResearcher } from "../src/agents/researcher";
+import { runWriter } from "../src/agents/writer";
+import { runScheduler } from "../src/agents/scheduler";
 
 const arg = process.argv[2] ?? "all";
 const today = new Date().toISOString().split("T")[0];
