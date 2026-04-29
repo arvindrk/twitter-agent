@@ -111,5 +111,5 @@ export function getPostsDue(): Promise<{ id: number }[]> {
       ),
     )
     .orderBy(scheduledPosts.scheduledAt)
-    .limit(5);
+    .limit(10);
 }
