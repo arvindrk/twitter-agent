@@ -1,4 +1,4 @@
-import { runDailyWorkflow } from "./pipeline.js";
+import { runDailyWorkflow } from "./pipeline";
 
 const posts = await runDailyWorkflow();
 const sorted = posts.sort(

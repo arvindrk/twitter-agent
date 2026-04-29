@@ -1,4 +1,4 @@
-import { publishTweet } from "./x.js";
+import { publishTweet } from "./x";
 
 const text =
   process.argv[2] ?? `test post from x-agent — ${new Date().toISOString()}`;
