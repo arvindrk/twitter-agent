@@ -99,10 +99,11 @@ app.post("/cron/execute-post", async (c) => {
         await markPublished(post.id, result.id, tweetUrl);
         console.log(`[cron/execute-post] Published post ${id} → tweet ${result.id}`);
         processed++;
-      } catch (err: any) {
-        console.error(`[cron/execute-post] Failed post ${id}:`, err.message);
-        await markFailed(post.id, err.message);
-        failed.push({ id: post.id, error: err.message });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[cron/execute-post] Failed post ${id}:`, msg);
+        await markFailed(post.id, msg);
+        failed.push({ id: post.id, error: msg });
       }
     }
 
@@ -130,10 +131,11 @@ app.post("/cron/execute-post", async (c) => {
     await markPublished(post.id, result.id, tweetUrl);
     console.log(`[cron/execute-post] Published post ${postId} → tweet ${result.id}`);
     return c.json({ ok: true, tweetId: result.id, tweetUrl });
-  } catch (err: any) {
-    console.error(`[cron/execute-post] Failed to publish post ${postId}:`, err.message);
-    await markFailed(post.id, err.message);
-    return c.json({ ok: false, error: err.message }, 500);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[cron/execute-post] Failed to publish post ${postId}:`, msg);
+    await markFailed(post.id, msg);
+    return c.json({ ok: false, error: msg }, 500);
   }
 });
 
