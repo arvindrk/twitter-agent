@@ -6,11 +6,18 @@ import {
   markPublished,
   markFailed,
   getPostsDue,
+  resetStalePosts,
 } from "./db.js";
 import { publishTweet } from "./x.js";
 
 const app = new Hono();
 const CRON_SECRET = process.env.CRON_SECRET;
+
+async function rejectThreadPost(id: number): Promise<string> {
+  const msg = "Thread publishing not yet implemented";
+  await markFailed(id, msg);
+  return msg;
+}
 
 function isAuthorized(req: Request): boolean {
   if (!CRON_SECRET) return true;
@@ -81,8 +88,8 @@ app.post("/cron/execute-post", async (c) => {
       }
 
       if (post.type === "thread") {
-        await markFailed(post.id, "Thread publishing not yet implemented");
-        failed.push({ id: post.id, error: "Thread publishing not yet implemented" });
+        const error = await rejectThreadPost(post.id);
+        failed.push({ id: post.id, error });
         continue;
       }
 
@@ -113,8 +120,8 @@ app.post("/cron/execute-post", async (c) => {
   }
 
   if (post.type === "thread") {
-    await markFailed(post.id, "Thread publishing not yet implemented");
-    return c.json({ ok: false, error: "Thread publishing not yet implemented" }, 501);
+    const error = await rejectThreadPost(post.id);
+    return c.json({ ok: false, error }, 501);
   }
 
   try {
