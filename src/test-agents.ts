@@ -3,9 +3,9 @@
  * Usage: bun src/test-agents.ts [researcher|writer|scheduler|all]
  */
 
-import { runResearcher } from "./agents/researcher";
-import { runWriter } from "./agents/writer";
-import { runScheduler } from "./agents/scheduler";
+import { runResearcher } from "./agents/researcher.js";
+import { runWriter } from "./agents/writer.js";
+import { runScheduler } from "./agents/scheduler.js";
 
 const arg = process.argv[2] ?? "all";
 const today = new Date().toISOString().split("T")[0];
