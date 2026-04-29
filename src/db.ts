@@ -88,6 +88,18 @@ export function markFailed(id: number, error: string) {
     .where(eq(scheduledPosts.id, id));
 }
 
+export function resetStalePosts() {
+  return db
+    .update(scheduledPosts)
+    .set({ status: "pending" })
+    .where(
+      and(
+        eq(scheduledPosts.status, "processing"),
+        sql`${scheduledPosts.scheduledAt} < NOW() - INTERVAL '10 minutes'`,
+      ),
+    );
+}
+
 export function getPostsDue(): Promise<{ id: number }[]> {
   return db
     .select({ id: scheduledPosts.id })
