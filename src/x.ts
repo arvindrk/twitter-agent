@@ -16,9 +16,7 @@ const xClient = new Client({
   }),
 });
 
-export async function publishTweet(
-  text: string,
-): Promise<{ id: string; text: string }> {
+export async function publishTweet(text: string): Promise<{ id: string }> {
   if (!text.trim()) throw new Error("Tweet text cannot be empty");
   if (text.length > 280)
     throw new Error(`Tweet text exceeds 280 chars (${text.length})`);
@@ -28,5 +26,5 @@ export async function publishTweet(
   if (!id)
     throw new Error(`X API returned no tweet id: ${JSON.stringify(response)}`);
   console.log(`[x] Published tweet ${id}`);
-  return { id, text };
+  return { id };
 }
