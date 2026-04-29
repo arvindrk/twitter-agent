@@ -47,9 +47,7 @@ const env = (k: string) => {
   return v;
 };
 
-const db = drizzle(neon(env("DATABASE_URL")), {
-  schema: { scheduledPosts },
-});
+const db = drizzle(neon(env("DATABASE_URL")));
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 

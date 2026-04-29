@@ -56,9 +56,10 @@ app.get("/cron/daily", async (c) => {
         `[cron/daily] Persisted to Neon — ids: ${rows.map((r) => r.id).join(", ")}`,
       );
     })
-    .catch((err: Error) =>
-      console.error(`[cron/daily] Run ${runId} threw:`, err.message),
-    );
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[cron/daily] Run ${runId} threw:`, msg);
+    });
 
   return c.json({ ok: true, runId }, 202);
 });
