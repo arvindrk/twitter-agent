@@ -3,7 +3,7 @@ import { xai } from "@ai-sdk/xai";
 import { z } from "zod";
 
 const SYSTEM = `
-You are a scheduling assistant for a Twitter account in the voice AI / developer tools space.
+You are a scheduling assistant for a Twitter account in the AI / developer tools space.
 
 Given a list of draft posts for today, assign each one an optimal posting time.
 
