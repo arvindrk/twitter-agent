@@ -73,6 +73,7 @@ app.post("/cron/execute-post", async (c) => {
 
   // ── Scan mode: no postId → execute all due posts ──────────────────────────
   if (!body || typeof body.postId !== "number") {
+    await resetStalePosts();
     const due = await getPostsDue();
     console.log(`[cron/execute-post] Scan mode — ${due.length} due post(s)`);
 
