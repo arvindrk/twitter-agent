@@ -41,7 +41,13 @@ type ScheduledPost = typeof scheduledPosts.$inferSelect;
 
 // ── Client ────────────────────────────────────────────────────────────────────
 
-const db = drizzle(neon(process.env.DATABASE_URL!), {
+const env = (k: string) => {
+  const v = process.env[k];
+  if (!v) throw new Error(`Missing env var: ${k}`);
+  return v;
+};
+
+const db = drizzle(neon(env("DATABASE_URL")), {
   schema: { scheduledPosts },
 });
 
