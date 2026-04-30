@@ -51,3 +51,24 @@ describe("isAuthorized — middleware", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("GET /", () => {
+  it("returns 200 with ok: true", async () => {
+    const res = await app.request(cronUrl("/"), { method: "GET" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+});
+
+describe("GET /cron/daily", () => {
+  it("returns 202 with runId and fires pipeline async", async () => {
+    const res = await app.request(cronUrl("/cron/daily"), { method: "GET", ...authed });
+    expect(res.status).toBe(202);
+    const body = await res.json() as { ok: boolean; runId: string };
+    expect(body.ok).toBe(true);
+    expect(typeof body.runId).toBe("string");
+    expect(body.runId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+});
