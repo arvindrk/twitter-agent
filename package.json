@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "dotenvx run -- bun run --hot src/index.ts",
-    "test": "bun test",
+    "test": "bun scripts/test.ts",
     "typecheck": "tsc --noEmit",
     "test:agents": "dotenvx run -- bun scripts/test-agents.ts",
     "test:researcher": "dotenvx run -- bun scripts/test-agents.ts researcher",
