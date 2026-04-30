@@ -193,3 +193,74 @@ describe("POST /cron/execute-post — scan mode", () => {
     x.publishTweet = mock(async () => ({ id: "tweet-123" }));
   });
 });
+
+describe("POST /cron/execute-post — single-post mode", () => {
+  const singlePost = (postId: number) =>
+    app.request(cronUrl("/cron/execute-post"), {
+      method: "POST",
+      ...authed,
+      headers: { ...authed.headers, "content-type": "application/json" },
+      body: JSON.stringify({ postId }),
+    });
+
+  const claimedPost = (overrides: object = {}) => ({
+    id: 10,
+    content: "Hello world",
+    type: "single" as const,
+    status: "processing" as const,
+    scheduledAt: new Date(),
+    slot: "morning" as const,
+    rationale: "",
+    tweetId: null,
+    tweetUrl: null,
+    error: null,
+    createdAt: new Date(),
+    publishedAt: null,
+    ...overrides,
+  });
+
+  it("happy path: publishes tweet and returns tweetId", async () => {
+    db.claimPost = mock(async () => claimedPost());
+    db.markPublished = mock(async () => {});
+    x.publishTweet = mock(async () => ({ id: "tweet-456" }));
+
+    const res = await singlePost(10);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean; tweetId: string; tweetUrl: string };
+    expect(body.ok).toBe(true);
+    expect(body.tweetId).toBe("tweet-456");
+    expect(body.tweetUrl).toBe("https://x.com/i/web/status/tweet-456");
+  });
+
+  it("returns skipped when claimPost returns null", async () => {
+    db.claimPost = mock(async () => null);
+
+    const res = await singlePost(10);
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean; status: string };
+    expect(body.ok).toBe(true);
+    expect(body.status).toBe("skipped");
+  });
+
+  it("returns 501 for thread type", async () => {
+    db.claimPost = mock(async () => claimedPost({ type: "thread" }));
+    db.markFailed = mock(async () => {});
+
+    const res = await singlePost(10);
+    expect(res.status).toBe(501);
+  });
+
+  it("returns 500 when publishTweet throws", async () => {
+    db.claimPost = mock(async () => claimedPost());
+    db.markFailed = mock(async () => {});
+    x.publishTweet = mock(async () => { throw new Error("rate limited"); });
+
+    const res = await singlePost(10);
+    expect(res.status).toBe(500);
+    const body = await res.json() as { ok: boolean; error: string };
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("rate limited");
+
+    x.publishTweet = mock(async () => ({ id: "tweet-123" }));
+  });
+});
