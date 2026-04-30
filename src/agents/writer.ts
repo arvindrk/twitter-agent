@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { xai } from "@ai-sdk/xai";
 import { z } from "zod";
-const sanitizeContent = (s: string) => s.replace(/\s*—\s*/g, ", ");
+export const sanitizeContent = (s: string) => s.replace(/\s*—\s*/g, ", ");
 
 const SYSTEM = `
 You write X (Twitter) posts for an AI enthusiast and engineer. Your job is to turn research findings into authentic, high-value posts that sound exactly like him, not like a brand account.
