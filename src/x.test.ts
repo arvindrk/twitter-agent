@@ -30,3 +30,15 @@ describe("publishTweet — empty/whitespace validation", () => {
     await expect(publishTweet("   ")).rejects.toThrow("Tweet text cannot be empty");
   });
 });
+
+describe("publishTweet — length limit", () => {
+  it("throws when text exceeds 280 chars", async () => {
+    const text = "a".repeat(281);
+    await expect(publishTweet(text)).rejects.toThrow("Tweet text exceeds 280 chars (281)");
+  });
+
+  it("accepts text at exactly 280 chars", async () => {
+    const text = "a".repeat(280);
+    await expect(publishTweet(text)).resolves.toMatchObject({ id: "tweet-123" });
+  });
+});
