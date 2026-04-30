@@ -1,5 +1,9 @@
 # Twitter Agent
 
+<a href="https://github.com/arvindrk/twitter-agent/actions/workflows/ci.yml">
+  <img src="https://github.com/arvindrk/twitter-agent/actions/workflows/ci.yml/badge.svg" alt="ci" />
+</a>
+
 Autonomous X (Twitter) posting system. Runs a daily pipeline that researches trending AI topics, writes developer-focused posts, and schedules them throughout the day. Built with Vercel AI SDK and xAI Grok.
 
 ## Pipeline
