@@ -1,8 +1,23 @@
-import { describe, it, expect, mock, beforeAll, afterAll } from "bun:test";
-import { stubEnv, stubDbModule, stubXModule, makePost, makeScheduleItem } from "./test/helpers.js";
+import { describe, it, expect, mock, beforeAll, afterAll, spyOn } from "bun:test";
+import { stubEnv, stubDbModule, stubXModule, makePost } from "./test/helpers.js";
 
-mock.module("./db.js", () => ({ ...stubDbModule }));
-mock.module("./x.js", () => ({ ...stubXModule }));
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db: Record<string, any> = { ...stubDbModule };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const x: Record<string, any> = { ...stubXModule };
+
+// Wrapper functions so named imports in app.ts always delegate to current db/x values.
+mock.module("./db.js", () => ({
+  insertScheduledPosts: (...a: unknown[]) => db.insertScheduledPosts(...a),
+  claimPost: (...a: unknown[]) => db.claimPost(...a),
+  markPublished: (...a: unknown[]) => db.markPublished(...a),
+  markFailed: (...a: unknown[]) => db.markFailed(...a),
+  getPostsDue: (...a: unknown[]) => db.getPostsDue(...a),
+  resetStalePosts: (...a: unknown[]) => db.resetStalePosts(...a),
+}));
+mock.module("./x.js", () => ({
+  publishTweet: (...a: unknown[]) => x.publishTweet(...a),
+}));
 mock.module("./pipeline.js", () => ({
   runDailyWorkflow: mock(async () => []),
 }));
@@ -70,5 +85,111 @@ describe("GET /cron/daily", () => {
     expect(body.runId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
+  });
+});
+
+describe("POST /cron/execute-post — scan mode", () => {
+  const post = (body?: object) =>
+    app.request(cronUrl("/cron/execute-post"), {
+      method: "POST",
+      ...authed,
+      headers: { ...authed.headers, "content-type": "application/json" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+  it("returns 401 when unauthorized", async () => {
+    const res = await app.request(cronUrl("/cron/execute-post"), { method: "POST" });
+    expect(res.status).toBe(401);
+  });
+
+  it("scan mode: processes due posts and returns summary", async () => {
+    db.getPostsDue = mock(async () => [{ id: 1 }]);
+    db.claimPost = mock(async () => ({
+      id: 1,
+      content: "Hello world",
+      type: "single" as const,
+      status: "processing" as const,
+      scheduledAt: new Date(),
+      slot: "morning" as const,
+      rationale: "",
+      tweetId: null,
+      tweetUrl: null,
+      error: null,
+      createdAt: new Date(),
+      publishedAt: null,
+    }));
+    db.markPublished = mock(async () => {});
+    db.resetStalePosts = mock(async () => {});
+
+    const res = await post();
+    expect(res.status).toBe(200);
+    const body = await res.json() as { ok: boolean; processed: number; skipped: number; failed: unknown[] };
+    expect(body.ok).toBe(true);
+    expect(body.processed).toBe(1);
+    expect(body.skipped).toBe(0);
+    expect(body.failed).toHaveLength(0);
+  });
+
+  it("scan mode: increments skipped when claimPost returns null", async () => {
+    db.getPostsDue = mock(async () => [{ id: 1 }]);
+    db.claimPost = mock(async () => null);
+    db.resetStalePosts = mock(async () => {});
+
+    const res = await post();
+    const body = await res.json() as { skipped: number };
+    expect(body.skipped).toBe(1);
+  });
+
+  it("scan mode: rejects thread posts into failed[]", async () => {
+    db.getPostsDue = mock(async () => [{ id: 2 }]);
+    db.claimPost = mock(async () => ({
+      id: 2,
+      content: "Thread content",
+      type: "thread" as const,
+      status: "processing" as const,
+      scheduledAt: new Date(),
+      slot: "morning" as const,
+      rationale: "",
+      tweetId: null,
+      tweetUrl: null,
+      error: null,
+      createdAt: new Date(),
+      publishedAt: null,
+    }));
+    db.markFailed = mock(async () => {});
+    db.resetStalePosts = mock(async () => {});
+
+    const res = await post();
+    const body = await res.json() as { failed: { id: number; error: string }[] };
+    expect(body.failed).toHaveLength(1);
+    expect(body.failed[0].id).toBe(2);
+  });
+
+  it("scan mode: records publishTweet failure in failed[]", async () => {
+    db.getPostsDue = mock(async () => [{ id: 3 }]);
+    db.claimPost = mock(async () => ({
+      id: 3,
+      content: "Hello world",
+      type: "single" as const,
+      status: "processing" as const,
+      scheduledAt: new Date(),
+      slot: "morning" as const,
+      rationale: "",
+      tweetId: null,
+      tweetUrl: null,
+      error: null,
+      createdAt: new Date(),
+      publishedAt: null,
+    }));
+    db.markFailed = mock(async () => {});
+    db.resetStalePosts = mock(async () => {});
+    x.publishTweet = mock(async () => { throw new Error("X API down"); });
+
+    const res = await post();
+    const body = await res.json() as { failed: { id: number; error: string }[] };
+    expect(body.failed).toHaveLength(1);
+    expect(body.failed[0].error).toBe("X API down");
+
+    x.publishTweet = mock(async () => ({ id: "tweet-123" }));
   });
 });
