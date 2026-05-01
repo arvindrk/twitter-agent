@@ -45,4 +45,18 @@ describe("runWriter", () => {
     const posts = await runWriter("brief") as Array<{ content: string }>;
     expect(posts[1].content).toBe("Second post, with em dash");
   });
+
+  it("returns empty array when model returns no posts", async () => {
+    mockGenerateObject.mockImplementationOnce(async () => ({
+      object: { posts: [] },
+      usage: { inputTokens: 5, outputTokens: 0 },
+    }));
+    const posts = await runWriter("brief") as unknown[];
+    expect(posts).toHaveLength(0);
+  });
+
+  it("propagates error when generateObject throws", async () => {
+    mockGenerateObject.mockImplementationOnce(async () => { throw new Error("model error"); });
+    await expect(runWriter("brief")).rejects.toThrow("model error");
+  });
 });

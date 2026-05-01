@@ -1,26 +1,16 @@
 import { describe, it, expect, mock, beforeAll } from "bun:test";
 
-mock.module("ai", () => ({
-  generateObject: mock(async () => ({
-    object: {
-      scheduleItems: [
-        {
-          postId: 1,
-          scheduledAt: "2026-04-29T13:00:00.000Z",
-          slot: "morning",
-          rationale: "Peak engagement",
-        },
-        {
-          postId: 2,
-          scheduledAt: "2026-04-29T17:00:00.000Z",
-          slot: "afternoon",
-          rationale: "Secondary window",
-        },
-      ],
-    },
-    usage: { inputTokens: 5, outputTokens: 15 },
-  })),
+const mockGenerateObject = mock(async () => ({
+  object: {
+    scheduleItems: [
+      { postId: 1, scheduledAt: "2026-04-29T13:00:00.000Z", slot: "morning", rationale: "Peak engagement" },
+      { postId: 2, scheduledAt: "2026-04-29T17:00:00.000Z", slot: "afternoon", rationale: "Secondary window" },
+    ],
+  },
+  usage: { inputTokens: 5, outputTokens: 15 },
 }));
+
+mock.module("ai", () => ({ generateObject: mockGenerateObject }));
 mock.module("@ai-sdk/xai", () => ({ xai: () => ({}) }));
 
 let runScheduler: (msg: string) => Promise<unknown[]>;
@@ -50,5 +40,19 @@ describe("runScheduler", () => {
       expect(typeof item.slot).toBe("string");
       expect(typeof item.rationale).toBe("string");
     }
+  });
+
+  it("returns empty array when model returns no items", async () => {
+    mockGenerateObject.mockImplementationOnce(async () => ({
+      object: { scheduleItems: [] },
+      usage: { inputTokens: 5, outputTokens: 0 },
+    }));
+    const items = await runScheduler("brief");
+    expect(items).toHaveLength(0);
+  });
+
+  it("propagates error when generateObject throws", async () => {
+    mockGenerateObject.mockImplementationOnce(async () => { throw new Error("model error"); });
+    await expect(runScheduler("brief")).rejects.toThrow("model error");
   });
 });
