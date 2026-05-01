@@ -17,7 +17,7 @@ if (files.length === 0) {
 let failed = false;
 
 for (const file of files) {
-  const result = await $`bun test ${file}`.nothrow();
+  const result = await $`bun test ${file} --coverage`.nothrow();
   if (result.exitCode !== 0) failed = true;
 }
 
