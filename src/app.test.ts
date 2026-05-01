@@ -120,6 +120,8 @@ describe("POST /cron/execute-post — scan mode", () => {
     expect(body.processed).toBe(1);
     expect(body.skipped).toBe(0);
     expect(body.failed).toHaveLength(0);
+    expect(db.claimPost).toHaveBeenCalledWith(1);
+    expect(db.markPublished).toHaveBeenCalledWith(1, "tweet-123", "https://x.com/i/web/status/tweet-123");
   });
 
   it("scan mode: increments skipped when claimPost returns null", async () => {
@@ -142,6 +144,7 @@ describe("POST /cron/execute-post — scan mode", () => {
     const body = await res.json() as { failed: { id: number; error: string }[] };
     expect(body.failed).toHaveLength(1);
     expect(body.failed[0].id).toBe(2);
+    expect(db.markFailed).toHaveBeenCalledWith(2, "Thread publishing not yet implemented");
   });
 
   it("scan mode: records publishTweet failure in failed[]", async () => {
@@ -155,6 +158,7 @@ describe("POST /cron/execute-post — scan mode", () => {
     const body = await res.json() as { failed: { id: number; error: string }[] };
     expect(body.failed).toHaveLength(1);
     expect(body.failed[0].error).toBe("X API down");
+    expect(db.markFailed).toHaveBeenCalledWith(3, "X API down");
   });
 });
 
@@ -180,6 +184,9 @@ describe("POST /cron/execute-post — single-post mode", () => {
     expect(body.ok).toBe(true);
     expect(body.tweetId).toBe("tweet-456");
     expect(body.tweetUrl).toBe("https://x.com/i/web/status/tweet-456");
+    expect(db.claimPost).toHaveBeenCalledWith(10);
+    expect(x.publishTweet).toHaveBeenCalledWith("Hello world");
+    expect(db.markPublished).toHaveBeenCalledWith(10, "tweet-456", "https://x.com/i/web/status/tweet-456");
   });
 
   it("returns skipped when claimPost returns null", async () => {
@@ -210,5 +217,6 @@ describe("POST /cron/execute-post — single-post mode", () => {
     const body = await res.json() as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(body.error).toBe("rate limited");
+    expect(db.markFailed).toHaveBeenCalledWith(10, "rate limited");
   });
 });
