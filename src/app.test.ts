@@ -1,5 +1,5 @@
-import { describe, it, expect, mock, beforeAll, afterAll, spyOn } from "bun:test";
-import { stubEnv, stubDbModule, stubXModule, makePost } from "./test/helpers.js";
+import { describe, it, expect, mock, beforeAll, afterAll, beforeEach } from "bun:test";
+import { stubEnv, stubDbModule, stubXModule, makePost, makeDbPost } from "./test/helpers.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: Record<string, any> = { ...stubDbModule };
@@ -28,6 +28,11 @@ let restore: () => void;
 beforeAll(async () => {
   restore = stubEnv({ CRON_SECRET: "test-secret" });
   ({ default: app } = await import("./app.js"));
+});
+
+beforeEach(() => {
+  Object.assign(db, { ...stubDbModule });
+  Object.assign(x, { ...stubXModule });
 });
 
 afterAll(() => restore());
@@ -104,20 +109,7 @@ describe("POST /cron/execute-post — scan mode", () => {
 
   it("scan mode: processes due posts and returns summary", async () => {
     db.getPostsDue = mock(async () => [{ id: 1 }]);
-    db.claimPost = mock(async () => ({
-      id: 1,
-      content: "Hello world",
-      type: "single" as const,
-      status: "processing" as const,
-      scheduledAt: new Date(),
-      slot: "morning" as const,
-      rationale: "",
-      tweetId: null,
-      tweetUrl: null,
-      error: null,
-      createdAt: new Date(),
-      publishedAt: null,
-    }));
+    db.claimPost = mock(async () => makeDbPost({ id: 1, content: "Hello world" }));
     db.markPublished = mock(async () => {});
     db.resetStalePosts = mock(async () => {});
 
@@ -142,20 +134,7 @@ describe("POST /cron/execute-post — scan mode", () => {
 
   it("scan mode: rejects thread posts into failed[]", async () => {
     db.getPostsDue = mock(async () => [{ id: 2 }]);
-    db.claimPost = mock(async () => ({
-      id: 2,
-      content: "Thread content",
-      type: "thread" as const,
-      status: "processing" as const,
-      scheduledAt: new Date(),
-      slot: "morning" as const,
-      rationale: "",
-      tweetId: null,
-      tweetUrl: null,
-      error: null,
-      createdAt: new Date(),
-      publishedAt: null,
-    }));
+    db.claimPost = mock(async () => makeDbPost({ id: 2, content: "Thread content", type: "thread" }));
     db.markFailed = mock(async () => {});
     db.resetStalePosts = mock(async () => {});
 
@@ -167,20 +146,7 @@ describe("POST /cron/execute-post — scan mode", () => {
 
   it("scan mode: records publishTweet failure in failed[]", async () => {
     db.getPostsDue = mock(async () => [{ id: 3 }]);
-    db.claimPost = mock(async () => ({
-      id: 3,
-      content: "Hello world",
-      type: "single" as const,
-      status: "processing" as const,
-      scheduledAt: new Date(),
-      slot: "morning" as const,
-      rationale: "",
-      tweetId: null,
-      tweetUrl: null,
-      error: null,
-      createdAt: new Date(),
-      publishedAt: null,
-    }));
+    db.claimPost = mock(async () => makeDbPost({ id: 3, content: "Hello world" }));
     db.markFailed = mock(async () => {});
     db.resetStalePosts = mock(async () => {});
     x.publishTweet = mock(async () => { throw new Error("X API down"); });
@@ -189,8 +155,6 @@ describe("POST /cron/execute-post — scan mode", () => {
     const body = await res.json() as { failed: { id: number; error: string }[] };
     expect(body.failed).toHaveLength(1);
     expect(body.failed[0].error).toBe("X API down");
-
-    x.publishTweet = mock(async () => ({ id: "tweet-123" }));
   });
 });
 
@@ -203,21 +167,7 @@ describe("POST /cron/execute-post — single-post mode", () => {
       body: JSON.stringify({ postId }),
     });
 
-  const claimedPost = (overrides: object = {}) => ({
-    id: 10,
-    content: "Hello world",
-    type: "single" as const,
-    status: "processing" as const,
-    scheduledAt: new Date(),
-    slot: "morning" as const,
-    rationale: "",
-    tweetId: null,
-    tweetUrl: null,
-    error: null,
-    createdAt: new Date(),
-    publishedAt: null,
-    ...overrides,
-  });
+  const claimedPost = (overrides = {}) => makeDbPost({ id: 10, ...overrides });
 
   it("happy path: publishes tweet and returns tweetId", async () => {
     db.claimPost = mock(async () => claimedPost());
@@ -260,7 +210,5 @@ describe("POST /cron/execute-post — single-post mode", () => {
     const body = await res.json() as { ok: boolean; error: string };
     expect(body.ok).toBe(false);
     expect(body.error).toBe("rate limited");
-
-    x.publishTweet = mock(async () => ({ id: "tweet-123" }));
   });
 });
