@@ -1,6 +1,21 @@
 import type { Post } from "../agents/writer.js";
 import type { ScheduleItem } from "../agents/scheduler.js";
 
+type DbPost = {
+  id: number;
+  content: string;
+  type: "single" | "thread";
+  status: "pending" | "processing" | "published" | "failed";
+  scheduledAt: Date;
+  slot: "morning" | "lunch" | "afternoon" | "evening" | "night";
+  rationale: string;
+  tweetId: string | null;
+  tweetUrl: string | null;
+  error: string | null;
+  createdAt: Date;
+  publishedAt: Date | null;
+};
+
 export function makePost(overrides: Partial<Post> = {}): Post {
   return { id: 1, content: "Test post content", type: "single", ...overrides };
 }
@@ -11,6 +26,24 @@ export function makeScheduleItem(overrides: Partial<ScheduleItem> = {}): Schedul
     scheduledAt: "2026-04-29T13:00:00.000Z",
     slot: "morning",
     rationale: "Peak engagement window",
+    ...overrides,
+  };
+}
+
+export function makeDbPost(overrides: Partial<DbPost> = {}): DbPost {
+  return {
+    id: 1,
+    content: "Hello world",
+    type: "single",
+    status: "processing",
+    scheduledAt: new Date("2026-04-29T13:00:00.000Z"),
+    slot: "morning",
+    rationale: "",
+    tweetId: null,
+    tweetUrl: null,
+    error: null,
+    createdAt: new Date("2026-04-29T00:00:00.000Z"),
+    publishedAt: null,
     ...overrides,
   };
 }
