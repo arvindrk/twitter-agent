@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { pgTable, serial, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { eq, and, sql } from "drizzle-orm";
 
 // ── Schema ────────────────────────────────────────────────────────────────────
@@ -50,6 +50,7 @@ export const engagementLog = pgTable("engagement_log", {
   eventType: text("event_type").notNull(),
   replyTweetId: text("reply_tweet_id"),
   status: engagementStatusEnum("status").notNull().default("processing"),
+  liked: boolean("liked").notNull().default(false),
   skipReason: text("skip_reason"),
   error: text("error"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -137,17 +138,17 @@ export async function claimEngagement(tweetId: string, eventType: string): Promi
   return rows.length > 0;
 }
 
-export function markEngagementReplied(tweetId: string, replyTweetId: string) {
+export function markEngagementReplied(tweetId: string, replyTweetId: string, liked: boolean) {
   return db
     .update(engagementLog)
-    .set({ status: "replied", replyTweetId })
+    .set({ status: "replied", replyTweetId, liked })
     .where(eq(engagementLog.tweetId, tweetId));
 }
 
-export function markEngagementSkipped(tweetId: string, skipReason: string) {
+export function markEngagementSkipped(tweetId: string, skipReason: string, liked: boolean) {
   return db
     .update(engagementLog)
-    .set({ status: "skipped", skipReason })
+    .set({ status: "skipped", skipReason, liked })
     .where(eq(engagementLog.tweetId, tweetId));
 }
 
