@@ -68,8 +68,8 @@ export const stubXModule = {
   fetchThreadContext: async () => [],
 };
 
-export const stubEngagementModule = {
-  runEngagementAgent: async () => ({
+export const stubInboundEngagementModule = {
+  runInboundEngagementAgent: async () => ({
     like: false,
     reply: { content: "Solid.", stance: "close" as const },
     reason: "Worthwhile question.",

@@ -54,7 +54,7 @@ You receive the full thread history before the mention. Read it entirely. Your r
 - Respond to the actual point being made, not a misreading of it
 `.trim();
 
-const engagementSchema = z.object({
+const inboundEngagementSchema = z.object({
   like: z.boolean().describe("Whether to like the tweet."),
   reply: z
     .object({
@@ -68,7 +68,7 @@ const engagementSchema = z.object({
   reason: z.string().describe("Brief rationale for the like and reply decisions."),
 });
 
-export type EngagementDecision = z.infer<typeof engagementSchema>;
+export type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
 
 function buildUserMessage(mention: {
   authorHandle: string;
@@ -91,21 +91,21 @@ function buildUserMessage(mention: {
   return parts.join("\n");
 }
 
-export async function runEngagementAgent(mention: {
+export async function runInboundEngagementAgent(mention: {
   tweetId: string;
   authorHandle: string;
   text: string;
   thread: ThreadNode[];
-}): Promise<EngagementDecision> {
+}): Promise<InboundEngagementDecision> {
   const { object, usage } = await generateObject({
     model: xai("grok-4-latest"),
     system: SYSTEM,
     messages: [{ role: "user", content: buildUserMessage(mention) }],
-    schema: engagementSchema,
+    schema: inboundEngagementSchema,
   });
-  let decision: EngagementDecision = object;
+  let decision: InboundEngagementDecision = object;
   if (decision.reply !== null && decision.reply.content.length > 280) {
-    console.warn(`[engagement] → reply over limit (${decision.reply.content.length}c), retrying`);
+    console.warn(`[inbound-engagement] → reply over limit (${decision.reply.content.length}c), retrying`);
     const { object: retried } = await generateObject({
       model: xai("grok-4-latest"),
       system: SYSTEM,
@@ -117,12 +117,12 @@ export async function runEngagementAgent(mention: {
           content: `Your reply was ${decision.reply.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
         },
       ],
-      schema: engagementSchema,
+      schema: inboundEngagementSchema,
     });
     decision = retried;
   }
   console.log(
-    `[engagement] → like=${object.like} reply=${object.reply !== null} in:${usage.inputTokens} out:${usage.outputTokens}`,
+    `[inbound-engagement] → like=${object.like} reply=${object.reply !== null} in:${usage.inputTokens} out:${usage.outputTokens}`,
   );
   return decision;
 }

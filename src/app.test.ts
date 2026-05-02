@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeAll, afterAll, beforeEach } from "bun:test";
-import { stubEnv, stubDbModule, stubXModule, stubEngagementModule, makePost, makeDbPost } from "./test/helpers.js";
+import { stubEnv, stubDbModule, stubXModule, stubInboundEngagementModule, makePost, makeDbPost } from "./test/helpers.js";
 import { createHmac } from "node:crypto";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,7 +7,7 @@ const db: Record<string, any> = { ...stubDbModule };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const x: Record<string, any> = { ...stubXModule };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const engagement: Record<string, any> = { ...stubEngagementModule };
+const engagement: Record<string, any> = { ...stubInboundEngagementModule };
 
 // Wrapper functions so named imports in app.ts always delegate to current db/x values.
 mock.module("./db.js", () => ({
@@ -28,8 +28,8 @@ mock.module("./x.js", () => ({
   likeTweet: (...a: unknown[]) => x.likeTweet(...a),
   fetchThreadContext: (...a: unknown[]) => x.fetchThreadContext(...a),
 }));
-mock.module("./agents/engagement.js", () => ({
-  runEngagementAgent: (...a: unknown[]) => engagement.runEngagementAgent(...a),
+mock.module("./agents/inbound-engagement.js", () => ({
+  runInboundEngagementAgent: (...a: unknown[]) => engagement.runInboundEngagementAgent(...a),
 }));
 mock.module("./pipeline.js", () => ({
   runDailyWorkflow: mock(async () => []),
@@ -46,7 +46,7 @@ beforeAll(async () => {
 beforeEach(() => {
   Object.assign(db, { ...stubDbModule });
   Object.assign(x, { ...stubXModule });
-  Object.assign(engagement, { ...stubEngagementModule });
+  Object.assign(engagement, { ...stubInboundEngagementModule });
 });
 
 afterAll(() => restore());

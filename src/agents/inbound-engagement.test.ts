@@ -20,15 +20,15 @@ type Mention = {
   thread: Array<{ handle: string; text: string }>;
 };
 
-let runEngagementAgent: (mention: Mention) => Promise<unknown>;
+let runInboundEngagementAgent: (mention: Mention) => Promise<unknown>;
 
 beforeAll(async () => {
-  ({ runEngagementAgent } = await import("./engagement.js"));
+  ({ runInboundEngagementAgent } = await import("./inbound-engagement.js"));
 });
 
-describe("runEngagementAgent", () => {
+describe("runInboundEngagementAgent", () => {
   it("returns like and reply with content and stance", async () => {
-    const result = await runEngagementAgent({
+    const result = await runInboundEngagementAgent({
       tweetId: "1",
       authorHandle: "user1",
       text: "How do you handle 100k rps?",
@@ -45,7 +45,7 @@ describe("runEngagementAgent", () => {
       object: { like: false, reply: null, reason: "marketing spam" },
       usage: { inputTokens: 5, outputTokens: 5 },
     }) as never);
-    const result = await runEngagementAgent({
+    const result = await runInboundEngagementAgent({
       tweetId: "2",
       authorHandle: "spammer",
       text: "Buy my course!",
@@ -61,7 +61,7 @@ describe("runEngagementAgent", () => {
       { handle: "alice", text: "Original question about latency" },
       { handle: "bob", text: "Good point about caching" },
     ];
-    await runEngagementAgent({
+    await runInboundEngagementAgent({
       tweetId: "3",
       authorHandle: "charlie",
       text: "What about connection pooling?",
@@ -77,7 +77,7 @@ describe("runEngagementAgent", () => {
   });
 
   it("uses grok-4-latest", async () => {
-    await runEngagementAgent({
+    await runInboundEngagementAgent({
       tweetId: "4",
       authorHandle: "user4",
       text: "Question?",
@@ -87,7 +87,7 @@ describe("runEngagementAgent", () => {
   });
 
   it("empty thread omits context header", async () => {
-    await runEngagementAgent({
+    await runInboundEngagementAgent({
       tweetId: "5",
       authorHandle: "user5",
       text: "Simple mention",
@@ -101,7 +101,7 @@ describe("runEngagementAgent", () => {
 
   it("non-empty thread includes context header", async () => {
     const thread = [{ handle: "dave", text: "Some context" }];
-    await runEngagementAgent({
+    await runInboundEngagementAgent({
       tweetId: "6",
       authorHandle: "user6",
       text: "Follow-up question",

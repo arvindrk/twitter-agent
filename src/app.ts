@@ -14,7 +14,7 @@ import {
   markEngagementFailed,
 } from "./db.js";
 import { publishTweet, replyToTweet, likeTweet, fetchThreadContext } from "./x.js";
-import { runEngagementAgent } from "./agents/engagement.js";
+import { runInboundEngagementAgent } from "./agents/inbound-engagement.js";
 
 interface XTweetEvent {
   id_str: string;
@@ -82,23 +82,23 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
 
     const eventType = isMention ? "mention" : "reply";
 
-    console.log(`\n[engagement] ${SEP}`);
-    console.log(`[engagement] tweet=${tweet.id_str} type=${eventType} from=@${tweet.user.screen_name}`);
+    console.log(`\n[inbound-engagement] ${SEP}`);
+    console.log(`[inbound-engagement] tweet=${tweet.id_str} type=${eventType} from=@${tweet.user.screen_name}`);
     const displayText = tweet.text.length > 100 ? tweet.text.slice(0, 97) + "..." : tweet.text;
-    console.log(`[engagement] text: "${displayText}"`);
+    console.log(`[inbound-engagement] text: "${displayText}"`);
 
     const claimed = await claimEngagement(tweet.id_str, eventType);
     if (!claimed) {
-      console.log(`[engagement] already claimed, skipping`);
-      console.log(`[engagement] ${SEP}\n`);
+      console.log(`[inbound-engagement] already claimed, skipping`);
+      console.log(`[inbound-engagement] ${SEP}\n`);
       continue;
     }
 
     try {
       const thread = await fetchThreadContext(tweet.in_reply_to_status_id_str);
-      if (thread.length > 0) console.log(`[engagement] thread: ${thread.length} node(s)`);
+      if (thread.length > 0) console.log(`[inbound-engagement] thread: ${thread.length} node(s)`);
 
-      const decision = await runEngagementAgent({
+      const decision = await runInboundEngagementAgent({
         tweetId: tweet.id_str,
         authorHandle: tweet.user.screen_name,
         text: tweet.text,
@@ -107,31 +107,31 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
 
       if (decision.like) {
         await likeTweet(tweet.id_str).catch((err: unknown) => {
-          console.error(`[engagement] → like failed: ${err instanceof Error ? err.message : err}`);
+          console.error(`[inbound-engagement] → like failed: ${err instanceof Error ? err.message : err}`);
         });
       }
 
       if (decision.reply === null) {
         await markEngagementSkipped(tweet.id_str, decision.reason, decision.like);
-        console.log(`[engagement] → no reply (like=${decision.like}): ${decision.reason}`);
-        console.log(`[engagement] ${SEP}\n`);
+        console.log(`[inbound-engagement] → no reply (like=${decision.like}): ${decision.reason}`);
+        console.log(`[inbound-engagement] ${SEP}\n`);
         continue;
       }
 
-      console.log(`[engagement] → reply stance=${decision.reply.stance} like=${decision.like}`);
-      console.log(`[engagement] → content: "${decision.reply.content}"`);
+      console.log(`[inbound-engagement] → reply stance=${decision.reply.stance} like=${decision.like}`);
+      console.log(`[inbound-engagement] → content: "${decision.reply.content}"`);
       const result = await replyToTweet(tweet.id_str, decision.reply.content);
       await markEngagementReplied(tweet.id_str, result.id, decision.like);
-      console.log(`[engagement] → posted reply ${result.id}`);
+      console.log(`[inbound-engagement] → posted reply ${result.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[engagement] → error: ${msg}`);
+      console.error(`[inbound-engagement] → error: ${msg}`);
       await markEngagementFailed(tweet.id_str, msg).catch((dbErr: unknown) => {
-        console.error(`[engagement] → failed to mark failure: ${dbErr instanceof Error ? dbErr.message : dbErr}`);
+        console.error(`[inbound-engagement] → failed to mark failure: ${dbErr instanceof Error ? dbErr.message : dbErr}`);
       });
     }
 
-    console.log(`[engagement] ${SEP}\n`);
+    console.log(`[inbound-engagement] ${SEP}\n`);
   }
 }
 
