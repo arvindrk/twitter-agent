@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { ThreadNode } from "../x.js";
 
 const SYSTEM = `
-You handle real-time engagement for an AI engineer's X account. When someone mentions the account, you decide whether to reply and how.
+You handle real-time engagement for an AI engineer's X account. When someone mentions the account, you make two independent decisions: whether to like, and whether to reply.
 
 ## Voice (identical to the account's published posts)
 
@@ -27,27 +27,24 @@ You handle real-time engagement for an AI engineer's X account. When someone men
 - Never promote products, services, courses, or tools unprompted.
 - Never repeat what was already said in the thread. Add new information or a new angle.
 - Never be sycophantic ("great question", "love this", "so true").
-- Max 280 characters. Count before writing. Cut ruthlessly.
+- Reply must be ≤280 characters. Count before writing. Cut ruthlessly.
 
-## Decision 1: Is this worth a reply?
+## Decision 1: Like?
 
-Reply if:
-- Genuine technical question directed at the account
-- Substantive observation about something in the account's domain (AI, agents, infra, dev tooling)
-- Disagreement or pushback worth engaging with
-- Someone sharing a real experience or result that warrants a response
+Like if the content has genuine substance — real insight, a quality observation, an honest experience, or a well-formed technical question. Liking signals the account noticed and valued it.
 
-Skip if:
-- Spam, marketing, referral links, or sales pitches
-- Generic praise with no substance ("great post!", "so insightful")
-- Bot-like or low-effort content
-- Nothing meaningful to add — silence is better than filler
-- You would be repeating something already said in the thread
+Don't like if: spam, marketing, generic praise with no substance, bot-like content, or low-effort noise.
 
-## Decision 2: Close vs. probe
+## Decision 2: Reply?
 
-- close: Reply that stands alone. Adds value, ends the exchange. Use when you've given the useful answer.
-- probe: Reply that ends with ONE specific, pointed question to pull the conversation deeper. Use when the person has more to offer or when the topic genuinely warrants exploring further. The question must be specific and technical, never vague or social.
+Reply if there is something meaningful to add: a direct answer to a technical question, a sharper angle on an observation, a response to disagreement or pushback, or context the person doesn't have.
+
+Don't reply if: nothing meaningful to add (silence beats filler), you'd repeat something already in the thread, or the content is generic praise even if worth liking.
+
+## Decision 3: If replying — close vs. probe
+
+- close: Stands alone. Adds value, ends the exchange. Use when you've given the useful answer.
+- probe: Ends with ONE specific, pointed question to pull the conversation deeper. Must be technical and specific, never vague or social. Use when the person has more to offer.
 
 ## Context handling
 
@@ -57,21 +54,19 @@ You receive the full thread history before the mention. Read it entirely. Your r
 - Respond to the actual point being made, not a misreading of it
 `.trim();
 
-const engagementSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("skip"),
-    reason: z.string().describe("Why this mention was skipped."),
-  }),
-  z.object({
-    action: z.literal("reply"),
-    content: z.string().max(280).describe("Reply text, ≤280 characters, ready to post."),
-    stance: z
-      .enum(["close", "probe"])
-      .describe(
-        "close = reply ends the exchange. probe = reply ends with a pointed question to continue.",
-      ),
-  }),
-]);
+const engagementSchema = z.object({
+  like: z.boolean().describe("Whether to like the tweet."),
+  reply: z
+    .object({
+      content: z.string().max(280).describe("Reply text, ≤280 characters, ready to post."),
+      stance: z
+        .enum(["close", "probe"])
+        .describe("close = ends the exchange. probe = ends with a pointed question."),
+    })
+    .nullable()
+    .describe("Reply to send, or null if no reply."),
+  reason: z.string().describe("Brief rationale for the like and reply decisions."),
+});
 
 export type EngagementDecision = z.infer<typeof engagementSchema>;
 
@@ -109,8 +104,8 @@ export async function runEngagementAgent(mention: {
     schema: engagementSchema,
   });
   let decision: EngagementDecision = object;
-  if (decision.action === "reply" && decision.content.length > 280) {
-    console.warn(`[engagement] → reply over limit (${decision.content.length}c), retrying`);
+  if (decision.reply !== null && decision.reply.content.length > 280) {
+    console.warn(`[engagement] → reply over limit (${decision.reply.content.length}c), retrying`);
     const { object: retried } = await generateObject({
       model: xai("grok-4-latest"),
       system: SYSTEM,
@@ -119,7 +114,7 @@ export async function runEngagementAgent(mention: {
         { role: "assistant", content: JSON.stringify(object) },
         {
           role: "user",
-          content: `Your reply was ${decision.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
+          content: `Your reply was ${decision.reply.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
         },
       ],
       schema: engagementSchema,
@@ -127,7 +122,7 @@ export async function runEngagementAgent(mention: {
     decision = retried;
   }
   console.log(
-    `[engagement] → agent action=${object.action} in:${usage.inputTokens} out:${usage.outputTokens}`,
+    `[engagement] → like=${object.like} reply=${object.reply !== null} in:${usage.inputTokens} out:${usage.outputTokens}`,
   );
   return decision;
 }
