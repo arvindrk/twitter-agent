@@ -90,20 +90,35 @@ describe("fetchThreadContext", () => {
   });
 
   test("returns empty array when X_BEARER_TOKEN is not set", async () => {
+    const original = process.env.X_BEARER_TOKEN;
     delete process.env.X_BEARER_TOKEN;
     const { fetchThreadContext } = await import("./x.js");
     expect(await fetchThreadContext("tw-1")).toEqual([]);
+    if (original !== undefined) process.env.X_BEARER_TOKEN = original;
   });
 
   test("returns tweet nodes in chronological order", async () => {
-    process.env.X_BEARER_TOKEN = "test-bearer";
+    const restoreEnv = stubEnv({ X_BEARER_TOKEN: "test-bearer" });
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mock(async (url: string) => {
+      if (String(url).includes("tw-grandparent")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { id: "tw-grandparent", text: "Grandparent tweet", referenced_tweets: [] },
+            includes: { users: [{ username: "bob" }] },
+          }),
+        } as any;
+      }
       if (String(url).includes("tw-parent")) {
         return {
           ok: true,
           json: async () => ({
-            data: { id: "tw-parent", text: "Original thought", referenced_tweets: [] },
+            data: {
+              id: "tw-parent",
+              text: "Parent tweet",
+              referenced_tweets: [{ type: "replied_to", id: "tw-grandparent" }],
+            },
             includes: { users: [{ username: "alice" }] },
           }),
         } as any;
@@ -113,19 +128,22 @@ describe("fetchThreadContext", () => {
 
     const { fetchThreadContext } = await import("./x.js");
     const result = await fetchThreadContext("tw-parent");
-    expect(result).toEqual([{ handle: "alice", text: "Original thought" }]);
+    expect(result).toEqual([
+      { handle: "bob", text: "Grandparent tweet" },
+      { handle: "alice", text: "Parent tweet" },
+    ]);
 
     globalThis.fetch = originalFetch;
-    delete process.env.X_BEARER_TOKEN;
+    restoreEnv();
   });
 
   test("returns empty array on fetch error", async () => {
-    process.env.X_BEARER_TOKEN = "test-bearer";
+    const restoreEnv = stubEnv({ X_BEARER_TOKEN: "test-bearer" });
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mock(async () => { throw new Error("network error"); }) as any;
     const { fetchThreadContext } = await import("./x.js");
     expect(await fetchThreadContext("tw-1")).toEqual([]);
     globalThis.fetch = originalFetch;
-    delete process.env.X_BEARER_TOKEN;
+    restoreEnv();
   });
 });
