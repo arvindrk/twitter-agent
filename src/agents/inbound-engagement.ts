@@ -1,7 +1,7 @@
 import { generateObject } from "ai";
 import { xai } from "@ai-sdk/xai";
 import { z } from "zod";
-import type { ThreadNode } from "../x.js";
+import type { ThreadNode } from "../x/index.js";
 
 const SYSTEM = `
 You handle real-time engagement for an AI engineer's X account. When someone mentions the account, you make two independent decisions: whether to like, and whether to reply.
@@ -58,14 +58,21 @@ const inboundEngagementSchema = z.object({
   like: z.boolean().describe("Whether to like the tweet."),
   reply: z
     .object({
-      content: z.string().max(280).describe("Reply text, ≤280 characters, ready to post."),
+      content: z
+        .string()
+        .max(280)
+        .describe("Reply text, ≤280 characters, ready to post."),
       stance: z
         .enum(["close", "probe"])
-        .describe("close = ends the exchange. probe = ends with a pointed question."),
+        .describe(
+          "close = ends the exchange. probe = ends with a pointed question.",
+        ),
     })
     .nullable()
     .describe("Reply to send, or null if no reply."),
-  reason: z.string().describe("Brief rationale for the like and reply decisions."),
+  reason: z
+    .string()
+    .describe("Brief rationale for the like and reply decisions."),
 });
 
 export type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
@@ -105,7 +112,9 @@ export async function runInboundEngagementAgent(mention: {
   });
   let decision: InboundEngagementDecision = object;
   if (decision.reply !== null && decision.reply.content.length > 280) {
-    console.warn(`[inbound-engagement] → reply over limit (${decision.reply.content.length}c), retrying`);
+    console.warn(
+      `[inbound-engagement] → reply over limit (${decision.reply.content.length}c), retrying`,
+    );
     const { object: retried } = await generateObject({
       model: xai("grok-4-latest"),
       system: SYSTEM,

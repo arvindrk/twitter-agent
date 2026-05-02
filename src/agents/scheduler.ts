@@ -43,7 +43,9 @@ export async function runScheduler(
     messages: [{ role: "user", content: userMessage }],
     schema: z.object({ scheduleItems: z.array(scheduleItemSchema) }),
   });
-  console.log(`[scheduler] usage — in:${usage.inputTokens} out:${usage.outputTokens}`);
+  console.log(
+    `[scheduler] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
+  );
   object.scheduleItems.forEach((s) =>
     console.log(`[scheduler] post ${s.postId} → ${s.slot} @ ${s.scheduledAt}`),
   );

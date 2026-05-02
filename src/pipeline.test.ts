@@ -19,7 +19,7 @@ mock.module("./agents/scheduler.js", () => ({
 let runDailyWorkflow: () => Promise<unknown[]>;
 
 beforeAll(async () => {
-  ({ runDailyWorkflow } = await import("./pipeline.js"));
+  ({ runDailyWorkflow } = await import("./services/pipeline.js"));
 });
 
 describe("pipeline — merge logic", () => {

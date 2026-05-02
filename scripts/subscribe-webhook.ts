@@ -2,7 +2,6 @@ import { createHmac, randomBytes } from "node:crypto";
 
 const WEBHOOK_ID = "2050473080393486337";
 const SUBSCRIBE_URL = `https://api.twitter.com/2/account_activity/webhooks/${WEBHOOK_ID}/subscriptions/all`;
-const CHECK_URL = `https://api.twitter.com/2/account_activity/webhooks/${WEBHOOK_ID}/subscriptions/all`;
 
 function env(k: string): string {
   const v = process.env[k];

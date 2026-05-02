@@ -1,6 +1,7 @@
-import { runResearcher } from "./agents/researcher.js";
-import { runWriter, type Post } from "./agents/writer.js";
-import { runScheduler, type ScheduleItem } from "./agents/scheduler.js";
+import { runResearcher } from "../agents/researcher.js";
+import { runWriter, type Post } from "../agents/writer.js";
+import { runScheduler, type ScheduleItem } from "../agents/scheduler.js";
+import { insertScheduledPosts } from "../db/posts.repo.js";
 
 type ScheduledPost = Post & ScheduleItem;
 
@@ -38,4 +39,20 @@ export async function runDailyWorkflow(): Promise<ScheduledPost[]> {
     const post = posts.find((p) => p.id === item.postId);
     return post ? [{ ...post, ...item }] : [];
   });
+}
+
+export async function runDailyWorkflowAndPersist(): Promise<{ count: number; ids: number[] }> {
+  const posts = await runDailyWorkflow();
+  const rows = await insertScheduledPosts(
+    posts.map((p) => ({
+      content: p.content,
+      type: p.type,
+      scheduledAt: new Date(p.scheduledAt),
+      slot: p.slot,
+      rationale: p.rationale,
+    })),
+  );
+  const ids = rows.map((r) => r.id);
+  console.log(`[pipeline] persisted — ids: ${ids.join(", ")}`);
+  return { count: ids.length, ids };
 }
