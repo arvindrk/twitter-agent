@@ -2,7 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in this project, please report it by opening a [GitHub issue](https://github.com/arvindrk/twitter-agent/issues/new) with the label `security`.
+**Do not open a public GitHub issue for security vulnerabilities.**
+
+Please report them privately using [GitHub's security advisory system](https://github.com/arvindrk/twitter-agent/security/advisories/new). This keeps the details confidential until a patch is available.
 
 Include as much detail as possible:
 
@@ -11,7 +13,7 @@ Include as much detail as possible:
 - Potential impact
 - Suggested fix (if any)
 
-Please do **not** include actual credentials, tokens, or secrets in the report.
+Do not include actual credentials, tokens, or secrets in the report.
 
 ## Scope
 

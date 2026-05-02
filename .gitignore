@@ -1,13 +1,10 @@
 # deps
 node_modules/
+package-lock.json
 .env
 .env.keys
 
-# mastra runtime databases
-mastra.db
-mastra.db-shm
-mastra.db-wal
-mastra.duckdb
-mastra.duckdb.wal
 .vercel
 *.pem
+AGENTS.md
+CLAUDE.md
