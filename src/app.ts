@@ -13,7 +13,7 @@ import {
   markEngagementSkipped,
   markEngagementFailed,
 } from "./db.js";
-import { publishTweet, replyToTweet, fetchThreadContext } from "./x.js";
+import { publishTweet, replyToTweet, likeTweet, fetchThreadContext } from "./x.js";
 import { runEngagementAgent } from "./agents/engagement.js";
 
 interface XTweetEvent {
@@ -105,17 +105,23 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
         thread,
       });
 
-      if (decision.action === "skip") {
-        await markEngagementSkipped(tweet.id_str, decision.reason);
-        console.log(`[engagement] → skip: ${decision.reason}`);
+      if (decision.like) {
+        await likeTweet(tweet.id_str).catch((err: unknown) => {
+          console.error(`[engagement] → like failed: ${err instanceof Error ? err.message : err}`);
+        });
+      }
+
+      if (decision.reply === null) {
+        await markEngagementSkipped(tweet.id_str, decision.reason, decision.like);
+        console.log(`[engagement] → no reply (like=${decision.like}): ${decision.reason}`);
         console.log(`[engagement] ${SEP}\n`);
         continue;
       }
 
-      console.log(`[engagement] → reply stance=${decision.stance}`);
-      console.log(`[engagement] → content: "${decision.content}"`);
-      const result = await replyToTweet(tweet.id_str, decision.content);
-      await markEngagementReplied(tweet.id_str, result.id);
+      console.log(`[engagement] → reply stance=${decision.reply.stance} like=${decision.like}`);
+      console.log(`[engagement] → content: "${decision.reply.content}"`);
+      const result = await replyToTweet(tweet.id_str, decision.reply.content);
+      await markEngagementReplied(tweet.id_str, result.id, decision.like);
       console.log(`[engagement] → posted reply ${result.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
