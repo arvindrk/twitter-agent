@@ -26,28 +26,30 @@ Developers, AI builders, founders — primarily US-based (EST/PST), with a secon
 `.trim();
 
 const scheduleItemSchema = z.object({
-  postId: z.number(),
-  scheduledAt: z.string(),
-  slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
-  rationale: z.string(),
+	postId: z.number(),
+	scheduledAt: z.string(),
+	slot: z.enum(["morning", "lunch", "afternoon", "evening", "night"]),
+	rationale: z.string(),
 });
 
 export type ScheduleItem = z.infer<typeof scheduleItemSchema>;
 
 export async function runScheduler(
-  userMessage: string,
+	userMessage: string,
 ): Promise<ScheduleItem[]> {
-  const { object, usage } = await generateObject({
-    model: xai("grok-4-1-fast-non-reasoning"),
-    system: SYSTEM,
-    messages: [{ role: "user", content: userMessage }],
-    schema: z.object({ scheduleItems: z.array(scheduleItemSchema) }),
-  });
-  console.log(
-    `[scheduler] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
-  );
-  object.scheduleItems.forEach((s) =>
-    console.log(`[scheduler] post ${s.postId} → ${s.slot} @ ${s.scheduledAt}`),
-  );
-  return object.scheduleItems;
+	const { object, usage } = await generateObject({
+		model: xai("grok-4-1-fast-non-reasoning"),
+		system: SYSTEM,
+		messages: [{ role: "user", content: userMessage }],
+		schema: z.object({ scheduleItems: z.array(scheduleItemSchema) }),
+	});
+	console.log(
+		`[scheduler] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
+	);
+	object.scheduleItems.forEach((s) =>
+		console.log(
+			`[scheduler] post ${s.postId} → ${s.slot} @ ${s.scheduledAt}`,
+		),
+	);
+	return object.scheduleItems;
 }

@@ -1,10 +1,10 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "target": "ESNext",
-    "skipLibCheck": true,
-    "types": ["bun-types"]
-  }
+	"compilerOptions": {
+		"strict": true,
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"target": "ESNext",
+		"skipLibCheck": true,
+		"types": ["bun-types"]
+	}
 }

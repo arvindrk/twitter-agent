@@ -37,6 +37,7 @@ Selects `id` from `scheduled_posts` where `status = 'pending' AND scheduled_at <
 Split behavior at the top of the handler based on whether `postId` is present in the parsed body:
 
 **Scan mode (no postId):**
+
 1. Call `getPostsDue()` to fetch due post IDs
 2. For each ID, call `claimPost(id)` -- if `null`, already claimed, skip
 3. For each claimed post, call `publishTweet` + `markPublished` or `markFailed`
@@ -67,9 +68,9 @@ Unchanged from current behavior.
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `src/db.ts` | Add `getPostsDue()` |
+| File           | Change                                     |
+| -------------- | ------------------------------------------ |
+| `src/db.ts`    | Add `getPostsDue()`                        |
 | `src/index.ts` | Extend `/cron/execute-post` with scan mode |
 
 No new files. No new routes. No schema changes.

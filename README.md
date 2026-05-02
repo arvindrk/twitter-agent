@@ -13,6 +13,7 @@ Autonomous X account. Researches AI/dev topics daily, writes and schedules posts
 Two independent loops:
 
 **Posting pipeline** — triggered once daily by cron:
+
 ```
 GET /cron/daily → researcher → writer → scheduler → Neon → cron-job.org → POST /cron/execute-post → X API
 ```
@@ -24,11 +25,13 @@ GET /cron/daily → researcher → writer → scheduler → Neon → cron-job.or
 Posts land in Neon as `pending`. cron-job.org polls `/cron/execute-post` every 30 minutes to publish what's due.
 
 **Engagement loop** — real-time via X Account Activity API:
+
 ```
 X webhook → POST /webhooks/x → engagement agent → replyToTweet → X API
 ```
 
 On every mention or reply, the engagement agent (`grok-4-latest`) reads full thread context and returns one of:
+
 - **skip** — spam, low-effort, or nothing to add
 - **reply/close** — self-contained reply that ends the exchange
 - **reply/probe** — reply ending with one pointed, technical question
@@ -39,7 +42,8 @@ Claims are written to `engagement_log` before the LLM call. Duplicate webhook de
 
 - **[Vercel AI SDK](https://sdk.vercel.ai)** — `generateText` (researcher) / `generateObject` (writer, scheduler, engagement)
 - **[xAI Grok](https://x.ai)** — Responses API and Chat Completions (not interchangeable)
-- **[Hono](https://hono.dev)** + **Node.js** — HTTP server on port 3010
+- **[Bun](https://bun.sh)** — runtime, package manager, test runner
+- **[Hono](https://hono.dev)** — HTTP server on port 3010
 - **[Neon](https://neon.tech)** + **[Drizzle ORM](https://orm.drizzle.team)** — Postgres (scheduled posts + engagement log)
 - **[X API v2 (XDK)](https://developer.x.com)** — OAuth1 for posting; Bearer token for thread hydration
 - **[Docker](https://docker.com)** — `oven/bun:1-alpine`
@@ -49,45 +53,45 @@ Claims are written to `engagement_log` before the LLM call. Duplicate webhook de
 ## Local development
 
 ```bash
-npm install
+bun install
 cp .env.example .env
-npx drizzle-kit push
-npm run dev
+bunx drizzle-kit push
+bun run dev
 ```
 
 ```bash
-npm run test:researcher
-npm run test:writer
-npm run test:scheduler
-npm run test:agents          # full pipeline
+bun run test:researcher
+bun run test:writer
+bun run test:scheduler
+bun run test:agents          # full pipeline
 
-npm run test:cron:daily
-npm run test:cron:execute-post
+bun run test:cron:daily
+bun run test:cron:execute-post
 ```
 
 ## Environment variables
 
-| Variable                | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| `XAI_API_KEY`           | xAI API key                                         |
-| `X_API_KEY`             | OAuth1 API key                                      |
-| `X_API_SECRET`          | OAuth1 API secret (also used for webhook HMAC)      |
-| `X_ACCESS_TOKEN`        | OAuth1 access token                                 |
-| `X_ACCESS_TOKEN_SECRET` | OAuth1 access token secret                          |
-| `X_USER_ID`             | Numeric user ID (filters self-events on webhooks)   |
-| `X_BEARER_TOKEN`        | App-only bearer token (thread context hydration)    |
-| `DATABASE_URL`          | Neon Postgres connection string                     |
-| `CRON_SECRET`           | Shared secret for cron HTTP routes                  |
+| Variable                | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `XAI_API_KEY`           | xAI API key                                       |
+| `X_API_KEY`             | OAuth1 API key                                    |
+| `X_API_SECRET`          | OAuth1 API secret (also used for webhook HMAC)    |
+| `X_ACCESS_TOKEN`        | OAuth1 access token                               |
+| `X_ACCESS_TOKEN_SECRET` | OAuth1 access token secret                        |
+| `X_USER_ID`             | Numeric user ID (filters self-events on webhooks) |
+| `X_BEARER_TOKEN`        | App-only bearer token (thread context hydration)  |
+| `DATABASE_URL`          | Neon Postgres connection string                   |
+| `CRON_SECRET`           | Shared secret for cron HTTP routes                |
 
 ## HTTP API
 
-| Method | Path                  | Description                                                  |
-| ------ | --------------------- | ------------------------------------------------------------ |
-| GET    | `/`                   | Health check                                                 |
-| GET    | `/cron/daily`         | Trigger posting pipeline (async, returns 202)                |
-| POST   | `/cron/execute-post`  | Publish due posts; no body = scan all, `{ postId }` = single |
-| GET    | `/webhooks/x`         | X CRC handshake                                              |
-| POST   | `/webhooks/x`         | Incoming mention/reply events (HMAC-verified)                |
+| Method | Path                 | Description                                                  |
+| ------ | -------------------- | ------------------------------------------------------------ |
+| GET    | `/`                  | Health check                                                 |
+| GET    | `/cron/daily`        | Trigger posting pipeline (async, returns 202)                |
+| POST   | `/cron/execute-post` | Publish due posts; no body = scan all, `{ postId }` = single |
+| GET    | `/webhooks/x`        | X CRC handshake                                              |
+| POST   | `/webhooks/x`        | Incoming mention/reply events (HMAC-verified)                |
 
 Cron routes require `x-cron-secret` header or `?secret=` query param.
 
@@ -106,13 +110,14 @@ cd ~/twitter-agent && docker compose pull && docker compose up -d
 ```
 
 **Register the webhook** (once after deploy):
+
 ```bash
-npx tsx scripts/subscribe-webhook.ts
+bun scripts/subscribe-webhook.ts
 ```
 
 ## Cron schedule (cron-job.org)
 
-| Job               | Endpoint                     | Schedule         |
-| ----------------- | ---------------------------- | ---------------- |
-| Daily pipeline    | `GET /cron/daily`            | Once daily       |
-| Publish due posts | `POST /cron/execute-post`    | Every 30 minutes |
+| Job               | Endpoint                  | Schedule         |
+| ----------------- | ------------------------- | ---------------- |
+| Daily pipeline    | `GET /cron/daily`         | Once daily       |
+| Publish due posts | `POST /cron/execute-post` | Every 30 minutes |

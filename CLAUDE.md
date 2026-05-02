@@ -14,12 +14,14 @@ Act as a factual, evidence-driven Staff Software Engineering expert and critical
 - Verify claims with credible sources when freshness, accuracy, or specificity matters. Cite sources when relied upon.
 
 Decision-making:
+
 - Pressure-test whether the problem is worth solving. Offer simpler alternatives when appropriate.
 - Say when rigor is necessary vs. when momentum dominates.
 - Say when a plan is under-specified or when the user is likely right but too early.
 - Avoid agreeable answers. Optimize for actionable decision clarity.
 
 Communication:
+
 - Be as concise as possible. Answer directly. Do not over-explain unless asked.
 - Never use em dashes.
 - Use lists over paragraphs when it improves clarity.
@@ -30,56 +32,59 @@ Communication:
 ## Commands
 
 ```bash
-# Start the Hono server (port 3010) with hot reload
-npm run dev
-
-# Run agents individually against real APIs
-npm run test:agents
-npm run test:researcher
-npm run test:writer
-npm run test:scheduler
-
-# Verify changes compile
-npx tsc --noEmit
+bun run dev               # Start Hono server on port 3010 with hot reload
+bun run test              # Run all unit tests
+bun run test:agents       # Run full pipeline against real APIs
+bun run test:researcher   # Researcher agent only
+bun run test:writer       # Writer agent only
+bun run test:scheduler    # Scheduler agent only
+bunx tsc --noEmit         # Typecheck
 ```
 
-The server exposes:
+## Server Routes
+
 - `GET /` — health check
-- `POST /test/post` — publish a tweet directly (`{ text: string }`)
-- `GET /cron/daily` — trigger the full 3-step pipeline (returns 202, runs async)
-- `POST /cron/execute-post` — publish a scheduled post by ID (`{ postId: number }`)
-
-## Architecture
-
-Autonomous X (Twitter) posting system. A daily pipeline runs via three sequential LLM calls.
-
-### Pipeline (`src/pipeline.ts`)
-
-```
-runResearcher → runWriter → runScheduler
-```
-
-1. **runResearcher** (`src/agents/researcher-agent.ts`) — `grok-4-latest` via Responses API with `webSearch` and `xSearch` tools. Produces a research brief.
-2. **runWriter** (`src/agents/writer-agent.ts`) — `grok-4-latest` via Chat Completions. Turns the brief into 4-6 posts. Returns structured output.
-3. **runScheduler** (`src/agents/scheduler-agent.ts`) — `grok-4-1-fast-non-reasoning`. Assigns posting times. Returns structured output with ISO 8601 timestamps.
-
-### X (Twitter) Integration (`src/x/`)
-
-- `client.ts` — OAuth1 singleton using `@xdevplatform/xdk`. Requires: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`.
-- `poster.ts` — wraps `xClient.posts.create()` with validation and error handling.
-
-### HTTP Server
-
-`src/index.ts` — Hono app served via `@hono/node-server`. Port 3010.
+- `GET /cron/daily` — trigger full pipeline (returns 202, runs async)
+- `POST /cron/execute-post` — no body = scan + publish all due posts; `{ postId: number }` = publish one
+- `GET /webhooks/x` — X CRC challenge
+- `POST /webhooks/x` — Account Activity events (mentions, replies)
 
 ## Environment Variables
 
-All env vars injected via `dotenvx` (`.env` file). Required:
-- `XAI_API_KEY` — xAI API key for all three agents
-- `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET` — X OAuth1 credentials
+All injected via `dotenvx` (`.env` file).
+
+| Variable                                                               | Required     | Purpose                                                 |
+| ---------------------------------------------------------------------- | ------------ | ------------------------------------------------------- |
+| `XAI_API_KEY`                                                          | Yes          | xAI API — all agents                                    |
+| `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET` | Yes          | X OAuth1 (posting)                                      |
+| `DATABASE_URL`                                                         | Yes          | Neon Postgres                                           |
+| `CRON_SECRET`                                                          | No           | Auth for cron endpoints; if unset, all requests allowed |
+| `X_USER_ID`                                                            | Yes (liking) | Required for `likeTweet`                                |
+| `X_BEARER_TOKEN`                                                       | No           | Thread context fetch; skipped if unset                  |
 
 ## Key Constraints
 
-- Researcher uses `xai.responses()` (Responses API), writer/scheduler use `xai()` (Chat Completions). Not interchangeable.
-- `runResearcher` uses `stopWhen: stepCountIs(10)` to allow multi-step tool use.
-- Pipeline runs synchronously — for long pipelines consider running async and polling.
+- `xai.responses()` (Responses API) for researcher; `xai()` (Chat Completions) for everything else. Not interchangeable.
+- `db/client.ts` initializes the DB connection at module scope. Tests that import any service with a DB dependency must mock `db/posts.repo.js` or `db/engagement.repo.js` before importing — otherwise CI fails with `Missing env var: DATABASE_URL`.
+- `/cron/daily` fires the pipeline async and returns 202 immediately — pipeline takes 30–90s and would time out a synchronous response.
+
+## Before Completing Any Task
+
+### 1. Layer compliance
+
+Does every new import respect the layer rules in `AGENTS.md`? Routes must not import repos directly. Services must not import `hono`. Agents must not touch DB or `x/api`.
+
+### 2. Dead / unused / duplicate code
+
+- `bunx tsc --noEmit` — zero errors
+- Any exported symbol with no import site? Delete it
+- Logic duplicated from an existing function? Consolidate
+- Commented-out code? Delete it
+- Type redefined that already exists in `db/schema.ts`? Replace it
+- Stale test mocks for renamed/deleted functions? Update them
+
+### 3. Verify
+
+- `bunx tsc --noEmit` passes
+- `bun run test` passes
+- New behavior has tests at the right layer (service logic in service tests, HTTP behavior in route tests)

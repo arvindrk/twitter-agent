@@ -51,32 +51,32 @@ You'll receive research findings: trends, angles, specific observations. Pick th
 `.trim();
 
 const postSchema = z.object({
-  id: z.number(),
-  content: z
-    .string()
-    .max(280)
-    .describe("Full post text, ready to publish. Must be ≤280 characters."),
-  type: z.enum(["single"]),
+	id: z.number(),
+	content: z
+		.string()
+		.max(280)
+		.describe("Full post text, ready to publish. Must be ≤280 characters."),
+	type: z.enum(["single"]),
 });
 
 export type Post = z.infer<typeof postSchema>;
 
 export async function runWriter(userMessage: string): Promise<Post[]> {
-  const { object, usage } = await generateObject({
-    model: xai("grok-4-latest"),
-    system: SYSTEM,
-    messages: [{ role: "user", content: userMessage }],
-    schema: z.object({ posts: z.array(postSchema) }),
-  });
-  console.log(
-    `[writer] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
-  );
-  const posts = object.posts.map((p) => ({
-    ...p,
-    content: sanitizeContent(p.content),
-  }));
-  posts.forEach((p) =>
-    console.log(`[writer] post ${p.id} [${p.type}] ${p.content.length}c`),
-  );
-  return posts;
+	const { object, usage } = await generateObject({
+		model: xai("grok-4-latest"),
+		system: SYSTEM,
+		messages: [{ role: "user", content: userMessage }],
+		schema: z.object({ posts: z.array(postSchema) }),
+	});
+	console.log(
+		`[writer] usage — in:${usage.inputTokens} out:${usage.outputTokens}`,
+	);
+	const posts = object.posts.map((p) => ({
+		...p,
+		content: sanitizeContent(p.content),
+	}));
+	posts.forEach((p) =>
+		console.log(`[writer] post ${p.id} [${p.type}] ${p.content.length}c`),
+	);
+	return posts;
 }

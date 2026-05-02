@@ -1,34 +1,37 @@
 {
-  "name": "twitter-agent",
-  "type": "module",
-  "scripts": {
-    "dev": "dotenvx run -- bun run --hot src/index.ts",
-    "test": "bun scripts/test.ts",
-    "typecheck": "tsc --noEmit",
-    "test:agents": "dotenvx run -- bun scripts/test-agents.ts",
-    "test:researcher": "dotenvx run -- bun scripts/test-agents.ts researcher",
-    "test:writer": "dotenvx run -- bun scripts/test-agents.ts writer",
-    "test:scheduler": "dotenvx run -- bun scripts/test-agents.ts scheduler",
-    "test:cron:daily": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X GET http://localhost:3010/cron/daily -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\"",
-    "test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'",
-    "test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\""
-  },
-  "dependencies": {
-    "@ai-sdk/xai": "^2.0.0",
-    "@dotenvx/dotenvx": "^1.61.0",
-    "@hono/node-server": "^1.0.0",
-    "@neondatabase/serverless": "^1.0.2",
-    "@xdevplatform/xdk": "^0.5.0",
-    "ai": "^5.0.0",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.12",
-    "zod": "^3"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^25.5.2",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
-  }
+	"name": "twitter-agent",
+	"type": "module",
+	"scripts": {
+		"dev": "dotenvx run -- bun run --hot src/index.ts",
+		"test": "bun scripts/test.ts",
+		"typecheck": "tsc --noEmit",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"test:agents": "dotenvx run -- bun scripts/test-agents.ts",
+		"test:researcher": "dotenvx run -- bun scripts/test-agents.ts researcher",
+		"test:writer": "dotenvx run -- bun scripts/test-agents.ts writer",
+		"test:scheduler": "dotenvx run -- bun scripts/test-agents.ts scheduler",
+		"test:cron:daily": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X GET http://localhost:3010/cron/daily -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\"",
+		"test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'",
+		"test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\""
+	},
+	"dependencies": {
+		"@ai-sdk/xai": "^2.0.0",
+		"@dotenvx/dotenvx": "^1.61.0",
+		"@hono/node-server": "^1.0.0",
+		"@neondatabase/serverless": "^1.0.2",
+		"@xdevplatform/xdk": "^0.5.0",
+		"ai": "^5.0.0",
+		"drizzle-orm": "^0.45.2",
+		"hono": "^4.12.12",
+		"zod": "^3"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/node": "^25.5.2",
+		"drizzle-kit": "^0.31.10",
+		"prettier": "^3.8.3",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.2"
+	}
 }

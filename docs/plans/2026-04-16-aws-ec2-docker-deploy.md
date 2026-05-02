@@ -22,6 +22,7 @@
 ## Task 1: Create the Dockerfile
 
 **Files:**
+
 - Create: `Dockerfile`
 - Create: `.dockerignore`
 
@@ -53,7 +54,7 @@ EXPOSE 3010
 CMD ["bun", "src/index.ts"]
 ```
 
-Why `--production`: strips `devDependencies` (typescript, drizzle-kit, tsx, @types/*). Bun runs TypeScript natively so no build step is needed.
+Why `--production`: strips `devDependencies` (typescript, drizzle-kit, tsx, @types/\*). Bun runs TypeScript natively so no build step is needed.
 
 **Step 3: Verify it builds locally**
 
@@ -70,6 +71,7 @@ docker run --rm --env-file .env -p 3010:3010 twitter-agent:local
 ```
 
 Expected output:
+
 ```
 Server is running on http://localhost:3010
 ```
@@ -90,27 +92,29 @@ git commit -m "feat: add Dockerfile for Bun/Hono app"
 ## Task 2: Create docker-compose.yml
 
 **Files:**
+
 - Create: `docker-compose.yml`
 
 **Step 1: Create `docker-compose.yml`**
 
 ```yaml
 services:
-  app:
-    image: ${ECR_IMAGE}
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "127.0.0.1:3010:3010"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3010/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+    app:
+        image: ${ECR_IMAGE}
+        restart: unless-stopped
+        env_file: .env
+        ports:
+            - "127.0.0.1:3010:3010"
+        healthcheck:
+            test: ["CMD", "wget", "-qO-", "http://localhost:3010/"]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 10s
 ```
 
 Key decisions:
+
 - `ports: "127.0.0.1:3010:3010"` — binds to loopback only. Port 3010 is NOT exposed to the internet. Nginx proxies to it.
 - `ECR_IMAGE` is an env var set in the deploy step (GitHub Actions injects it).
 - `env_file: .env` — reads the `.env` file from the same directory on EC2.
@@ -152,6 +156,7 @@ Save this — you'll need it everywhere.
 **Step 2: Create IAM role for EC2 (so it can pull from ECR without keys)**
 
 In AWS Console → IAM → Roles → Create role:
+
 - Trusted entity: AWS service → EC2
 - Attach policy: `AmazonEC2ContainerRegistryReadOnly`
 - Role name: `ec2-twitter-agent-role`
@@ -159,6 +164,7 @@ In AWS Console → IAM → Roles → Create role:
 **Step 3: Create IAM user for GitHub Actions (to push to ECR)**
 
 In AWS Console → IAM → Users → Create user:
+
 - Name: `github-actions-ecr`
 - Access type: Programmatic only
 - Attach policy: `AmazonEC2ContainerRegistryPowerUser`
@@ -182,11 +188,11 @@ Do this in the AWS Console. One-time setup.
 
 Name it `twitter-agent-sg`. Inbound rules:
 
-| Type | Protocol | Port | Source |
-|------|----------|------|--------|
-| SSH | TCP | 22 | My IP (your current IP) |
-| HTTP | TCP | 80 | 0.0.0.0/0 |
-| HTTPS | TCP | 443 | 0.0.0.0/0 |
+| Type  | Protocol | Port | Source                  |
+| ----- | -------- | ---- | ----------------------- |
+| SSH   | TCP      | 22   | My IP (your current IP) |
+| HTTP  | TCP      | 80   | 0.0.0.0/0               |
+| HTTPS | TCP      | 443  | 0.0.0.0/0               |
 
 Do NOT open port 3010 — Nginx handles external traffic on 80/443.
 
@@ -315,6 +321,7 @@ curl http://localhost:3010/
 ## Task 7: Nginx Reverse Proxy Config
 
 **Files:**
+
 - Create on EC2: `/etc/nginx/sites-available/twitter-agent`
 
 **Step 1: Write Nginx config on EC2**
@@ -374,6 +381,7 @@ Certbot auto-modifies your Nginx config to handle 443 and redirect 80 → 443.
 ## Task 8: systemd Service for Auto-Restart on Reboot
 
 **Files:**
+
 - Create on EC2: `/etc/systemd/system/twitter-agent.service`
 
 **Step 1: Create systemd unit**
@@ -431,19 +439,20 @@ curl http://localhost:3010/
 ## Task 9: GitHub Actions CI/CD
 
 **Files:**
+
 - Create: `.github/workflows/deploy.yml`
 
 **Step 1: Add secrets to GitHub repo**
 
 In GitHub → repo → Settings → Secrets and variables → Actions:
 
-| Secret name | Value |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | from the `github-actions-ecr` IAM user |
-| `AWS_SECRET_ACCESS_KEY` | from the `github-actions-ecr` IAM user |
-| `EC2_HOST` | your Elastic IP |
-| `EC2_SSH_KEY` | contents of `~/.ssh/twitter-agent.pem` (the full PEM including headers) |
-| `ECR_REGISTRY` | `123456789012.dkr.ecr.us-east-1.amazonaws.com` |
+| Secret name             | Value                                                                   |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`     | from the `github-actions-ecr` IAM user                                  |
+| `AWS_SECRET_ACCESS_KEY` | from the `github-actions-ecr` IAM user                                  |
+| `EC2_HOST`              | your Elastic IP                                                         |
+| `EC2_SSH_KEY`           | contents of `~/.ssh/twitter-agent.pem` (the full PEM including headers) |
+| `ECR_REGISTRY`          | `123456789012.dkr.ecr.us-east-1.amazonaws.com`                          |
 
 **Step 2: Create workflow file**
 
@@ -451,57 +460,57 @@ In GitHub → repo → Settings → Secrets and variables → Actions:
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+    push:
+        branches: [main]
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REPOSITORY: twitter-agent
+    AWS_REGION: us-east-1
+    ECR_REPOSITORY: twitter-agent
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    deploy:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push image
-        id: build
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY/$ECR_REPOSITORY:latest
-          docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+            - name: Build, tag, and push image
+              id: build
+              env:
+                  REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  IMAGE_TAG: ${{ github.sha }}
+              run: |
+                  docker build -t $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+                  docker tag $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY/$ECR_REPOSITORY:latest
+                  docker push $REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+                  docker push $REGISTRY/$ECR_REPOSITORY:latest
+                  echo "image=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Deploy to EC2
-        env:
-          ECR_IMAGE: ${{ steps.build.outputs.image }}
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/ec2_key.pem
-          chmod 400 /tmp/ec2_key.pem
-          ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ubuntu@${{ secrets.EC2_HOST }} \
-            "cd ~/twitter-agent && \
-             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }} && \
-             ECR_IMAGE=${{ steps.build.outputs.image }} docker compose pull && \
-             ECR_IMAGE=${{ steps.build.outputs.image }} docker compose up -d && \
-             docker image prune -f"
-          rm /tmp/ec2_key.pem
+            - name: Deploy to EC2
+              env:
+                  ECR_IMAGE: ${{ steps.build.outputs.image }}
+              run: |
+                  echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/ec2_key.pem
+                  chmod 400 /tmp/ec2_key.pem
+                  ssh -o StrictHostKeyChecking=no -i /tmp/ec2_key.pem ubuntu@${{ secrets.EC2_HOST }} \
+                    "cd ~/twitter-agent && \
+                     aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }} && \
+                     ECR_IMAGE=${{ steps.build.outputs.image }} docker compose pull && \
+                     ECR_IMAGE=${{ steps.build.outputs.image }} docker compose up -d && \
+                     docker image prune -f"
+                  rm /tmp/ec2_key.pem
 ```
 
 **Step 3: Push to main and watch it run**
@@ -515,6 +524,7 @@ git push origin main
 Go to GitHub → Actions tab → watch the `Deploy` workflow run.
 
 Expected progression:
+
 1. Checkout ✓
 2. Configure AWS credentials ✓
 3. Login to ECR ✓
@@ -535,6 +545,7 @@ curl http://<ELASTIC_IP>/
 Update your cron-job.org jobs to hit the new EC2 URL.
 
 **Job 1 — Daily pipeline:**
+
 - URL: `http://<ELASTIC_IP>/cron/daily`
 - Method: GET
 - Header: `x-cron-secret: <your CRON_SECRET value>`
@@ -542,6 +553,7 @@ Update your cron-job.org jobs to hit the new EC2 URL.
 - Timeout: 10s (route returns 202 immediately, pipeline runs async)
 
 **Job 2 — Execute posts:**
+
 - URL: `http://<ELASTIC_IP>/cron/execute-post`
 - Method: POST
 - Header: `x-cron-secret: <your CRON_SECRET value>`
@@ -569,24 +581,24 @@ Watch the researcher → writer → scheduler pipeline logs appear.
 
 ## Troubleshooting Reference
 
-| Symptom | Command | Common cause |
-|---|---|---|
-| Container not starting | `docker compose logs` | Bad env var, port conflict |
-| 502 Bad Gateway | `sudo nginx -t && curl localhost:3010` | App crashed, check compose logs |
-| ECR pull fails on EC2 | `aws sts get-caller-identity` | IAM role not attached to instance |
-| SSH refused | Check Security Group port 22 | Your IP changed, update inbound rule |
-| Cron returns 401 | `echo $CRON_SECRET` in container | .env not loaded, check env_file path |
-| Image too large | `docker images` | Add more to .dockerignore, check node_modules |
+| Symptom                | Command                                | Common cause                                  |
+| ---------------------- | -------------------------------------- | --------------------------------------------- |
+| Container not starting | `docker compose logs`                  | Bad env var, port conflict                    |
+| 502 Bad Gateway        | `sudo nginx -t && curl localhost:3010` | App crashed, check compose logs               |
+| ECR pull fails on EC2  | `aws sts get-caller-identity`          | IAM role not attached to instance             |
+| SSH refused            | Check Security Group port 22           | Your IP changed, update inbound rule          |
+| Cron returns 401       | `echo $CRON_SECRET` in container       | .env not loaded, check env_file path          |
+| Image too large        | `docker images`                        | Add more to .dockerignore, check node_modules |
 
 ---
 
 ## Cost Summary (post-setup)
 
-| Resource | Monthly cost |
-|---|---|
-| EC2 t2.micro (free tier) | $0 for 12 months, then $9.50 |
-| EBS 8GB gp3 | $0.64 |
-| Elastic IP (attached) | $0 |
-| ECR (< 500MB free tier) | $0 |
-| Data transfer (< 100GB/month) | $0 |
-| **Total** | **$0.64/month for 12 months** |
+| Resource                      | Monthly cost                  |
+| ----------------------------- | ----------------------------- |
+| EC2 t2.micro (free tier)      | $0 for 12 months, then $9.50  |
+| EBS 8GB gp3                   | $0.64                         |
+| Elastic IP (attached)         | $0                            |
+| ECR (< 500MB free tier)       | $0                            |
+| Data transfer (< 100GB/month) | $0                            |
+| **Total**                     | **$0.64/month for 12 months** |

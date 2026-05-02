@@ -25,15 +25,15 @@ bun run test      # run the full test suite (no API tokens used)
 
 ## Project structure
 
-| Path | What lives here |
-|------|-----------------|
-| `src/agents/` | LLM functions: researcher, writer, scheduler |
-| `src/pipeline.ts` | Chains the three agents in sequence |
-| `src/app.ts` | Hono HTTP routes |
-| `src/db.ts` | Neon/Postgres schema and query helpers |
-| `src/x.ts` | X (Twitter) OAuth1 client and poster |
-| `src/test/` | Shared test helpers and mock factories |
-| `scripts/` | One-off run and test scripts |
+| Path              | What lives here                              |
+| ----------------- | -------------------------------------------- |
+| `src/agents/`     | LLM functions: researcher, writer, scheduler |
+| `src/pipeline.ts` | Chains the three agents in sequence          |
+| `src/app.ts`      | Hono HTTP routes                             |
+| `src/db.ts`       | Neon/Postgres schema and query helpers       |
+| `src/x.ts`        | X (Twitter) OAuth1 client and poster         |
+| `src/test/`       | Shared test helpers and mock factories       |
+| `scripts/`        | One-off run and test scripts                 |
 
 ## Making changes
 

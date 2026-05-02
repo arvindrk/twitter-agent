@@ -55,83 +55,83 @@ You receive the full thread history before the mention. Read it entirely. Your r
 `.trim();
 
 const inboundEngagementSchema = z.object({
-  like: z.boolean().describe("Whether to like the tweet."),
-  reply: z
-    .object({
-      content: z
-        .string()
-        .max(280)
-        .describe("Reply text, ≤280 characters, ready to post."),
-      stance: z
-        .enum(["close", "probe"])
-        .describe(
-          "close = ends the exchange. probe = ends with a pointed question.",
-        ),
-    })
-    .nullable()
-    .describe("Reply to send, or null if no reply."),
-  reason: z
-    .string()
-    .describe("Brief rationale for the like and reply decisions."),
+	like: z.boolean().describe("Whether to like the tweet."),
+	reply: z
+		.object({
+			content: z
+				.string()
+				.max(280)
+				.describe("Reply text, ≤280 characters, ready to post."),
+			stance: z
+				.enum(["close", "probe"])
+				.describe(
+					"close = ends the exchange. probe = ends with a pointed question.",
+				),
+		})
+		.nullable()
+		.describe("Reply to send, or null if no reply."),
+	reason: z
+		.string()
+		.describe("Brief rationale for the like and reply decisions."),
 });
 
 export type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
 
 function buildUserMessage(mention: {
-  authorHandle: string;
-  text: string;
-  thread: ThreadNode[];
+	authorHandle: string;
+	text: string;
+	thread: ThreadNode[];
 }): string {
-  const parts: string[] = [];
+	const parts: string[] = [];
 
-  if (mention.thread.length > 0) {
-    parts.push("Thread context (chronological):");
-    for (const node of mention.thread) {
-      parts.push(`@${node.handle}: ${node.text}`);
-    }
-    parts.push("---");
-  }
+	if (mention.thread.length > 0) {
+		parts.push("Thread context (chronological):");
+		for (const node of mention.thread) {
+			parts.push(`@${node.handle}: ${node.text}`);
+		}
+		parts.push("---");
+	}
 
-  parts.push(`Mention from @${mention.authorHandle}:`);
-  parts.push(mention.text);
+	parts.push(`Mention from @${mention.authorHandle}:`);
+	parts.push(mention.text);
 
-  return parts.join("\n");
+	return parts.join("\n");
 }
 
 export async function runInboundEngagementAgent(mention: {
-  tweetId: string;
-  authorHandle: string;
-  text: string;
-  thread: ThreadNode[];
+	tweetId: string;
+	authorHandle: string;
+	text: string;
+	thread: ThreadNode[];
 }): Promise<InboundEngagementDecision> {
-  const { object, usage } = await generateObject({
-    model: xai("grok-4-latest"),
-    system: SYSTEM,
-    messages: [{ role: "user", content: buildUserMessage(mention) }],
-    schema: inboundEngagementSchema,
-  });
-  let decision: InboundEngagementDecision = object;
-  if (decision.reply !== null && decision.reply.content.length > 280) {
-    console.warn(
-      `[inbound-engagement] → reply over limit (${decision.reply.content.length}c), retrying`,
-    );
-    const { object: retried } = await generateObject({
-      model: xai("grok-4-latest"),
-      system: SYSTEM,
-      messages: [
-        { role: "user", content: buildUserMessage(mention) },
-        { role: "assistant", content: JSON.stringify(object) },
-        {
-          role: "user",
-          content: `Your reply was ${decision.reply.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
-        },
-      ],
-      schema: inboundEngagementSchema,
-    });
-    decision = retried;
-  }
-  console.log(
-    `[inbound-engagement] → like=${object.like} reply=${object.reply !== null} in:${usage.inputTokens} out:${usage.outputTokens}`,
-  );
-  return decision;
+	const { object, usage } = await generateObject({
+		model: xai("grok-4-latest"),
+		system: SYSTEM,
+		messages: [{ role: "user", content: buildUserMessage(mention) }],
+		schema: inboundEngagementSchema,
+	});
+	let decision: InboundEngagementDecision = object;
+	if (decision.reply !== null && decision.reply.content.length > 280) {
+		console.warn(
+			`[inbound-engagement] → reply over limit (${decision.reply.content.length}c), retrying`,
+		);
+		const { object: retried } = await generateObject({
+			model: xai("grok-4-latest"),
+			system: SYSTEM,
+			messages: [
+				{ role: "user", content: buildUserMessage(mention) },
+				{ role: "assistant", content: JSON.stringify(object) },
+				{
+					role: "user",
+					content: `Your reply was ${decision.reply.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
+				},
+			],
+			schema: inboundEngagementSchema,
+		});
+		decision = retried;
+	}
+	console.log(
+		`[inbound-engagement] → like=${object.like} reply=${object.reply !== null} in:${usage.inputTokens} out:${usage.outputTokens}`,
+	);
+	return decision;
 }

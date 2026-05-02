@@ -1,0 +1,6 @@
+node_modules
+dist
+drizzle
+bun.lock
+package-lock.json
+.env*
