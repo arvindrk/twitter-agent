@@ -55,10 +55,24 @@ export const stubDbModule = {
   markFailed: async () => {},
   getPostsDue: async () => [],
   resetStalePosts: async () => {},
+  claimEngagement: async () => true,
+  markEngagementReplied: async () => {},
+  markEngagementSkipped: async () => {},
+  markEngagementFailed: async () => {},
 };
 
 export const stubXModule = {
   publishTweet: async () => ({ id: "tweet-123" }),
+  replyToTweet: async () => ({ id: "reply-456" }),
+  fetchThreadContext: async () => [],
+};
+
+export const stubEngagementModule = {
+  runEngagementAgent: async () => ({
+    action: "reply" as const,
+    content: "Solid.",
+    stance: "close" as const,
+  }),
 };
 
 export function stubEnv(vars: Record<string, string | undefined>) {

@@ -1,10 +1,13 @@
 import { describe, it, expect, mock, beforeAll, afterAll, beforeEach } from "bun:test";
-import { stubEnv, stubDbModule, stubXModule, makePost, makeDbPost } from "./test/helpers.js";
+import { stubEnv, stubDbModule, stubXModule, stubEngagementModule, makePost, makeDbPost } from "./test/helpers.js";
+import { createHmac } from "node:crypto";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: Record<string, any> = { ...stubDbModule };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const x: Record<string, any> = { ...stubXModule };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const engagement: Record<string, any> = { ...stubEngagementModule };
 
 // Wrapper functions so named imports in app.ts always delegate to current db/x values.
 mock.module("./db.js", () => ({
@@ -14,9 +17,18 @@ mock.module("./db.js", () => ({
   markFailed: (...a: unknown[]) => db.markFailed(...a),
   getPostsDue: (...a: unknown[]) => db.getPostsDue(...a),
   resetStalePosts: (...a: unknown[]) => db.resetStalePosts(...a),
+  claimEngagement: (...a: unknown[]) => db.claimEngagement(...a),
+  markEngagementReplied: (...a: unknown[]) => db.markEngagementReplied(...a),
+  markEngagementSkipped: (...a: unknown[]) => db.markEngagementSkipped(...a),
+  markEngagementFailed: (...a: unknown[]) => db.markEngagementFailed(...a),
 }));
 mock.module("./x.js", () => ({
   publishTweet: (...a: unknown[]) => x.publishTweet(...a),
+  replyToTweet: (...a: unknown[]) => x.replyToTweet(...a),
+  fetchThreadContext: (...a: unknown[]) => x.fetchThreadContext(...a),
+}));
+mock.module("./agents/engagement.js", () => ({
+  runEngagementAgent: (...a: unknown[]) => engagement.runEngagementAgent(...a),
 }));
 mock.module("./pipeline.js", () => ({
   runDailyWorkflow: mock(async () => []),
@@ -33,6 +45,7 @@ beforeAll(async () => {
 beforeEach(() => {
   Object.assign(db, { ...stubDbModule });
   Object.assign(x, { ...stubXModule });
+  Object.assign(engagement, { ...stubEngagementModule });
 });
 
 afterAll(() => restore());
@@ -218,5 +231,82 @@ describe("POST /cron/execute-post — single-post mode", () => {
     expect(body.ok).toBe(false);
     expect(body.error).toBe("rate limited");
     expect(db.markFailed).toHaveBeenCalledWith(10, "rate limited");
+  });
+});
+
+const WEBHOOK_SECRET = "test-api-secret";
+const MY_USER_ID = "me-42";
+
+function webhookSig(body: string) {
+  return "sha256=" + createHmac("sha256", WEBHOOK_SECRET).update(body).digest("base64");
+}
+
+function mentionPayload(tweetId = "tw-1", authorId = "user-99") {
+  return JSON.stringify({
+    for_user_id: MY_USER_ID,
+    tweet_create_events: [{
+      id_str: tweetId,
+      text: "@me how does your agent handle rate limits?",
+      user: { id_str: authorId, screen_name: "devuser" },
+      in_reply_to_status_id_str: null,
+      in_reply_to_user_id_str: MY_USER_ID,
+      is_quote_status: false,
+      entities: { user_mentions: [{ id_str: MY_USER_ID, screen_name: "me" }] },
+    }],
+  });
+}
+
+describe("GET /webhooks/x", () => {
+  it("returns sha256 CRC response for valid crc_token", async () => {
+    const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET });
+    const res = await app.request("http://localhost/webhooks/x?crc_token=abc123");
+    restore();
+    expect(res.status).toBe(200);
+    const body = await res.json() as { response_token: string };
+    expect(body.response_token).toMatch(/^sha256=/);
+  });
+
+  it("returns 400 when crc_token is missing", async () => {
+    const res = await app.request("http://localhost/webhooks/x");
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /webhooks/x", () => {
+  it("returns 401 with invalid signature", async () => {
+    const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET });
+    const body = mentionPayload();
+    const res = await app.request("http://localhost/webhooks/x", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-twitter-webhooks-signature": "sha256=bad" },
+      body,
+    });
+    restore();
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 200 with valid signature", async () => {
+    const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET, X_USER_ID: MY_USER_ID });
+    const body = mentionPayload();
+    const res = await app.request("http://localhost/webhooks/x", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-twitter-webhooks-signature": webhookSig(body) },
+      body,
+    });
+    restore();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+  });
+
+  it("returns 200 and is a no-op for payloads with no tweet_create_events", async () => {
+    const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET, X_USER_ID: MY_USER_ID });
+    const body = JSON.stringify({ for_user_id: MY_USER_ID });
+    const res = await app.request("http://localhost/webhooks/x", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-twitter-webhooks-signature": webhookSig(body) },
+      body,
+    });
+    restore();
+    expect(res.status).toBe(200);
   });
 });

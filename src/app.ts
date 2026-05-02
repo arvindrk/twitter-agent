@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { runDailyWorkflow } from "./pipeline.js";
 import {
   insertScheduledPosts,
@@ -7,8 +8,28 @@ import {
   markFailed,
   getPostsDue,
   resetStalePosts,
+  claimEngagement,
+  markEngagementReplied,
+  markEngagementSkipped,
+  markEngagementFailed,
 } from "./db.js";
-import { publishTweet } from "./x.js";
+import { publishTweet, replyToTweet, fetchThreadContext } from "./x.js";
+import { runEngagementAgent } from "./agents/engagement.js";
+
+interface XTweetEvent {
+  id_str: string;
+  text: string;
+  user: { id_str: string; screen_name: string };
+  in_reply_to_status_id_str: string | null;
+  in_reply_to_user_id_str: string | null;
+  is_quote_status: boolean;
+  entities?: { user_mentions?: { id_str: string; screen_name: string }[] };
+}
+
+interface XWebhookPayload {
+  for_user_id: string;
+  tweet_create_events?: XTweetEvent[];
+}
 
 const app = new Hono();
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -25,6 +46,71 @@ function isAuthorized(req: Request): boolean {
     req.headers.get("x-cron-secret") ??
     new URL(req.url).searchParams.get("secret");
   return token === CRON_SECRET;
+}
+
+function verifyWebhookSignature(rawBody: string, signature: string | undefined): boolean {
+  if (!signature) return false;
+  const secret = process.env.X_API_SECRET;
+  if (!secret) return false;
+  const expected =
+    "sha256=" + createHmac("sha256", secret).update(rawBody).digest("base64");
+  try {
+    return timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
+}
+
+async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
+  const events = payload.tweet_create_events;
+  if (!events?.length) return;
+
+  const myUserId = process.env.X_USER_ID;
+  if (!myUserId) {
+    console.error("[webhooks/x] X_USER_ID not set");
+    return;
+  }
+
+  for (const tweet of events) {
+    if (tweet.user.id_str === myUserId) continue;
+
+    const isMention = tweet.entities?.user_mentions?.some((m) => m.id_str === myUserId);
+    const isReplyToMe = tweet.in_reply_to_user_id_str === myUserId;
+    if (!isMention && !isReplyToMe) continue;
+
+    const eventType = isMention ? "mention" : "reply";
+    const claimed = await claimEngagement(tweet.id_str, eventType);
+    if (!claimed) {
+      console.log(`[webhooks/x] ${tweet.id_str} already claimed, skipping`);
+      continue;
+    }
+
+    try {
+      const thread = await fetchThreadContext(tweet.in_reply_to_status_id_str);
+
+      const decision = await runEngagementAgent({
+        tweetId: tweet.id_str,
+        authorHandle: tweet.user.screen_name,
+        text: tweet.text,
+        thread,
+      });
+
+      if (decision.action === "skip") {
+        await markEngagementSkipped(tweet.id_str, decision.reason);
+        console.log(`[webhooks/x] skipped ${tweet.id_str}: ${decision.reason}`);
+        continue;
+      }
+
+      console.log(`[webhooks/x] ${tweet.id_str} stance=${decision.stance}`);
+      const result = await replyToTweet(tweet.id_str, decision.content);
+      await markEngagementReplied(tweet.id_str, result.id);
+      console.log(`[webhooks/x] replied ${tweet.id_str} → ${result.id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[webhooks/x] failed on ${tweet.id_str}:`, msg);
+      await markEngagementFailed(tweet.id_str, msg);
+    }
+  }
 }
 
 app.get("/", (c) => c.json({ ok: true }));
@@ -139,6 +225,29 @@ app.post("/cron/execute-post", async (c) => {
     await markFailed(post.id, msg);
     return c.json({ ok: false, error: msg }, 500);
   }
+});
+
+app.get("/webhooks/x", (c) => {
+  const crcToken = c.req.query("crc_token");
+  if (!crcToken) return c.json({ error: "missing crc_token" }, 400);
+  const secret = process.env.X_API_SECRET;
+  if (!secret) return c.json({ error: "server misconfigured" }, 500);
+  const hash = createHmac("sha256", secret).update(crcToken).digest("base64");
+  return c.json({ response_token: `sha256=${hash}` });
+});
+
+app.post("/webhooks/x", async (c) => {
+  const rawBody = await c.req.text();
+  const signature = c.req.header("x-twitter-webhooks-signature");
+
+  if (!verifyWebhookSignature(rawBody, signature))
+    return c.json({ error: "Invalid signature" }, 401);
+
+  processEngagementEvent(JSON.parse(rawBody) as XWebhookPayload).catch((err: unknown) => {
+    console.error("[webhooks/x] unhandled error:", err instanceof Error ? err.message : err);
+  });
+
+  return c.json({ ok: true });
 });
 
 export default app;
