@@ -108,7 +108,12 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[webhooks/x] failed on ${tweet.id_str}:`, msg);
-      await markEngagementFailed(tweet.id_str, msg);
+      await markEngagementFailed(tweet.id_str, msg).catch((dbErr: unknown) => {
+        console.error(
+          `[webhooks/x] failed to mark failure for ${tweet.id_str}:`,
+          dbErr instanceof Error ? dbErr.message : dbErr,
+        );
+      });
     }
   }
 }

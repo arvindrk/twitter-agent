@@ -264,6 +264,8 @@ describe("GET /webhooks/x", () => {
     expect(res.status).toBe(200);
     const body = await res.json() as { response_token: string };
     expect(body.response_token).toMatch(/^sha256=/);
+    const expectedToken = "sha256=" + createHmac("sha256", WEBHOOK_SECRET).update("abc123").digest("base64");
+    expect(body.response_token).toBe(expectedToken);
   });
 
   it("returns 400 when crc_token is missing", async () => {
