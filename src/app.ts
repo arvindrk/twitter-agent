@@ -71,6 +71,8 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
     return;
   }
 
+  const SEP = "─".repeat(50);
+
   for (const tweet of events) {
     if (tweet.user.id_str === myUserId) continue;
 
@@ -79,14 +81,22 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
     if (!isMention && !isReplyToMe) continue;
 
     const eventType = isMention ? "mention" : "reply";
+
+    console.log(`\n[engagement] ${SEP}`);
+    console.log(`[engagement] tweet=${tweet.id_str} type=${eventType} from=@${tweet.user.screen_name}`);
+    const displayText = tweet.text.length > 100 ? tweet.text.slice(0, 97) + "..." : tweet.text;
+    console.log(`[engagement] text: "${displayText}"`);
+
     const claimed = await claimEngagement(tweet.id_str, eventType);
     if (!claimed) {
-      console.log(`[webhooks/x] ${tweet.id_str} already claimed, skipping`);
+      console.log(`[engagement] already claimed, skipping`);
+      console.log(`[engagement] ${SEP}\n`);
       continue;
     }
 
     try {
       const thread = await fetchThreadContext(tweet.in_reply_to_status_id_str);
+      if (thread.length > 0) console.log(`[engagement] thread: ${thread.length} node(s)`);
 
       const decision = await runEngagementAgent({
         tweetId: tweet.id_str,
@@ -97,24 +107,25 @@ async function processEngagementEvent(payload: XWebhookPayload): Promise<void> {
 
       if (decision.action === "skip") {
         await markEngagementSkipped(tweet.id_str, decision.reason);
-        console.log(`[webhooks/x] skipped ${tweet.id_str}: ${decision.reason}`);
+        console.log(`[engagement] → skip: ${decision.reason}`);
+        console.log(`[engagement] ${SEP}\n`);
         continue;
       }
 
-      console.log(`[webhooks/x] ${tweet.id_str} stance=${decision.stance}`);
+      console.log(`[engagement] → reply stance=${decision.stance}`);
+      console.log(`[engagement] → content: "${decision.content}"`);
       const result = await replyToTweet(tweet.id_str, decision.content);
       await markEngagementReplied(tweet.id_str, result.id);
-      console.log(`[webhooks/x] replied ${tweet.id_str} → ${result.id}`);
+      console.log(`[engagement] → posted reply ${result.id}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[webhooks/x] failed on ${tweet.id_str}:`, msg);
+      console.error(`[engagement] → error: ${msg}`);
       await markEngagementFailed(tweet.id_str, msg).catch((dbErr: unknown) => {
-        console.error(
-          `[webhooks/x] failed to mark failure for ${tweet.id_str}:`,
-          dbErr instanceof Error ? dbErr.message : dbErr,
-        );
+        console.error(`[engagement] → failed to mark failure: ${dbErr instanceof Error ? dbErr.message : dbErr}`);
       });
     }
+
+    console.log(`[engagement] ${SEP}\n`);
   }
 }
 

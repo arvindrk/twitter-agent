@@ -65,9 +65,11 @@ const engagementSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("reply"),
     content: z.string().describe("Reply text, ≤280 characters, ready to post."),
-    stance: z.enum(["close", "probe"]).describe(
-      "close = reply ends the exchange. probe = reply ends with a pointed question to continue.",
-    ),
+    stance: z
+      .enum(["close", "probe"])
+      .describe(
+        "close = reply ends the exchange. probe = reply ends with a pointed question to continue.",
+      ),
   }),
 ]);
 
@@ -110,12 +112,12 @@ export async function runEngagementAgent(mention: {
   if (decision.action === "reply" && decision.content.length > 280) {
     const truncated = decision.content.slice(0, 277) + "...";
     console.warn(
-      `[engagement] tweet=${mention.tweetId} content truncated ${decision.content.length}→${truncated.length}c`,
+      `[engagement] → content truncated ${decision.content.length}→${truncated.length}c`,
     );
     decision = { ...decision, content: truncated };
   }
   console.log(
-    `[engagement] tweet=${mention.tweetId} action=${object.action} in:${usage.inputTokens} out:${usage.outputTokens}`,
+    `[engagement] → agent action=${object.action} in:${usage.inputTokens} out:${usage.outputTokens}`,
   );
   return decision;
 }
