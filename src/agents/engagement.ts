@@ -64,7 +64,7 @@ const engagementSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("reply"),
-    content: z.string().max(280).describe("Reply text, ≤280 characters, ready to post."),
+    content: z.string().describe("Reply text, ≤280 characters, ready to post."),
     stance: z.enum(["close", "probe"]).describe(
       "close = reply ends the exchange. probe = reply ends with a pointed question to continue.",
     ),
@@ -85,7 +85,7 @@ function buildUserMessage(mention: {
     for (const node of mention.thread) {
       parts.push(`@${node.handle}: ${node.text}`);
     }
-    parts.push("");
+    parts.push("---");
   }
 
   parts.push(`Mention from @${mention.authorHandle}:`);
@@ -106,8 +106,16 @@ export async function runEngagementAgent(mention: {
     messages: [{ role: "user", content: buildUserMessage(mention) }],
     schema: engagementSchema,
   });
+  let decision: EngagementDecision = object;
+  if (decision.action === "reply" && decision.content.length > 280) {
+    const truncated = decision.content.slice(0, 277) + "...";
+    console.warn(
+      `[engagement] tweet=${mention.tweetId} content truncated ${decision.content.length}→${truncated.length}c`,
+    );
+    decision = { ...decision, content: truncated };
+  }
   console.log(
     `[engagement] tweet=${mention.tweetId} action=${object.action} in:${usage.inputTokens} out:${usage.outputTokens}`,
   );
-  return object;
+  return decision;
 }
