@@ -61,11 +61,12 @@ export const stubXModule = {
   publishTweet: async () => ({ id: "tweet-123" }),
 };
 
-export function stubEnv(vars: Record<string, string>) {
+export function stubEnv(vars: Record<string, string | undefined>) {
   const original: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(vars)) {
     original[k] = process.env[k];
-    process.env[k] = v;
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
   }
   return () => {
     for (const [k, v] of Object.entries(original)) {

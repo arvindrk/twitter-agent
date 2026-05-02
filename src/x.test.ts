@@ -90,11 +90,10 @@ describe("fetchThreadContext", () => {
   });
 
   test("returns empty array when X_BEARER_TOKEN is not set", async () => {
-    const original = process.env.X_BEARER_TOKEN;
-    delete process.env.X_BEARER_TOKEN;
+    const restore = stubEnv({ X_BEARER_TOKEN: undefined });
     const { fetchThreadContext } = await import("./x.js");
     expect(await fetchThreadContext("tw-1")).toEqual([]);
-    if (original !== undefined) process.env.X_BEARER_TOKEN = original;
+    restore();
   });
 
   test("returns tweet nodes in chronological order", async () => {
