@@ -8,6 +8,7 @@ labels: bug
 A clear description of what went wrong.
 
 **Steps to reproduce**
+
 1. ...
 2. ...
 
@@ -18,6 +19,7 @@ What you expected to happen.
 What actually happened. Include logs or error output if relevant.
 
 **Environment**
+
 - Bun version:
 - Node version (if relevant):
 - OS:
