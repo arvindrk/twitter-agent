@@ -3,9 +3,9 @@ import { describe, it, expect, mock, beforeAll } from "bun:test";
 const mockXai = mock((modelId: string) => ({ id: modelId }));
 const mockGenerateObject = mock(async () => ({
   object: {
-    action: "reply" as const,
-    content: "Latency at that scale is brutal.",
-    stance: "probe" as const,
+    like: true,
+    reply: { content: "Latency at that scale is brutal.", stance: "probe" as const },
+    reason: "Substantive technical question.",
   },
   usage: { inputTokens: 10, outputTokens: 20 },
 }));
@@ -27,21 +27,22 @@ beforeAll(async () => {
 });
 
 describe("runEngagementAgent", () => {
-  it("returns reply with content and stance", async () => {
+  it("returns like and reply with content and stance", async () => {
     const result = await runEngagementAgent({
       tweetId: "1",
       authorHandle: "user1",
       text: "How do you handle 100k rps?",
       thread: [],
-    }) as { action: string; content: string; stance: string };
-    expect(result.action).toBe("reply");
-    expect(result.content).toBe("Latency at that scale is brutal.");
-    expect(result.stance).toBe("probe");
+    }) as { like: boolean; reply: { content: string; stance: string } | null; reason: string };
+    expect(result.like).toBe(true);
+    expect(result.reply).not.toBeNull();
+    expect(result.reply!.content).toBe("Latency at that scale is brutal.");
+    expect(result.reply!.stance).toBe("probe");
   });
 
-  it("returns skip with reason", async () => {
+  it("returns no like and no reply for spam", async () => {
     mockGenerateObject.mockImplementationOnce(async () => ({
-      object: { action: "skip", reason: "marketing spam" },
+      object: { like: false, reply: null, reason: "marketing spam" },
       usage: { inputTokens: 5, outputTokens: 5 },
     }) as never);
     const result = await runEngagementAgent({
@@ -49,8 +50,9 @@ describe("runEngagementAgent", () => {
       authorHandle: "spammer",
       text: "Buy my course!",
       thread: [],
-    }) as { action: string; reason: string };
-    expect(result.action).toBe("skip");
+    }) as { like: boolean; reply: null; reason: string };
+    expect(result.like).toBe(false);
+    expect(result.reply).toBeNull();
     expect(result.reason).toBe("marketing spam");
   });
 

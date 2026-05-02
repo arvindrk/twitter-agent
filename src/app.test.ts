@@ -25,6 +25,7 @@ mock.module("./db.js", () => ({
 mock.module("./x.js", () => ({
   publishTweet: (...a: unknown[]) => x.publishTweet(...a),
   replyToTweet: (...a: unknown[]) => x.replyToTweet(...a),
+  likeTweet: (...a: unknown[]) => x.likeTweet(...a),
   fetchThreadContext: (...a: unknown[]) => x.fetchThreadContext(...a),
 }));
 mock.module("./agents/engagement.js", () => ({

@@ -64,14 +64,15 @@ export const stubDbModule = {
 export const stubXModule = {
   publishTweet: async () => ({ id: "tweet-123" }),
   replyToTweet: async () => ({ id: "reply-456" }),
+  likeTweet: async () => {},
   fetchThreadContext: async () => [],
 };
 
 export const stubEngagementModule = {
   runEngagementAgent: async () => ({
-    action: "reply" as const,
-    content: "Solid.",
-    stance: "close" as const,
+    like: false,
+    reply: { content: "Solid.", stance: "close" as const },
+    reason: "Worthwhile question.",
   }),
 };
 
