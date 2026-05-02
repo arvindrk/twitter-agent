@@ -51,6 +51,14 @@ export async function replyToTweet(
   return { id };
 }
 
+export async function likeTweet(tweetId: string): Promise<void> {
+  const userId = process.env.X_USER_ID;
+  if (!userId) throw new Error("Missing env var: X_USER_ID");
+  console.log(`[x] Liking tweet ${tweetId}...`);
+  await xClient.users.likePost(userId, { body: { tweetId } } as Parameters<typeof xClient.users.likePost>[1]);
+  console.log(`[x] Liked tweet ${tweetId}`);
+}
+
 export interface ThreadNode {
   handle: string;
   text: string;
