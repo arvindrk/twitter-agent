@@ -226,7 +226,7 @@ git commit -m "feat: extend execute-post with scan mode for cron-job.org"
 In `package.json` `scripts`, add:
 
 ```json
-"test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:44a24d2a8adafb03cdeb668b69180b6af71883d650e0ed424ebd0191ecaa73dd\""
+"test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:REDACTED\""
 ```
 
 Note: no `-d` body -- this is what triggers scan mode.
