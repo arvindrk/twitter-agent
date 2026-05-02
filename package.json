@@ -22,7 +22,7 @@
 	"dependencies": {
 		"@ai-sdk/xai": "^2.0.0",
 		"@dotenvx/dotenvx": "^1.61.0",
-		"@hono/node-server": "^1.0.0",
+		"@hono/node-server": "^2.0.1",
 		"@neondatabase/serverless": "^1.0.2",
 		"@xdevplatform/xdk": "^0.5.0",
 		"ai": "^5.0.0",
