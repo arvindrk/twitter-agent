@@ -5,19 +5,25 @@ import { eq, and, sql } from "drizzle-orm";
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
-const postTypeEnum = pgEnum("post_type", ["single", "thread"]);
-const postStatusEnum = pgEnum("post_status", [
+export const postTypeEnum = pgEnum("post_type", ["single", "thread"]);
+export const postStatusEnum = pgEnum("post_status", [
   "pending",
   "processing",
   "published",
   "failed",
 ]);
-const timeSlotEnum = pgEnum("time_slot", [
+export const timeSlotEnum = pgEnum("time_slot", [
   "morning",
   "lunch",
   "afternoon",
   "evening",
   "night",
+]);
+export const engagementStatusEnum = pgEnum("engagement_status", [
+  "processing",
+  "replied",
+  "skipped",
+  "failed",
 ]);
 
 export const scheduledPosts = pgTable("scheduled_posts", {
@@ -38,6 +44,16 @@ export const scheduledPosts = pgTable("scheduled_posts", {
 });
 
 type ScheduledPost = typeof scheduledPosts.$inferSelect;
+
+export const engagementLog = pgTable("engagement_log", {
+  tweetId: text("tweet_id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  replyTweetId: text("reply_tweet_id"),
+  status: engagementStatusEnum("status").notNull().default("processing"),
+  skipReason: text("skip_reason"),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // ── Client ────────────────────────────────────────────────────────────────────
 
@@ -110,4 +126,34 @@ export function getPostsDue(): Promise<{ id: number }[]> {
     )
     .orderBy(scheduledPosts.scheduledAt)
     .limit(10);
+}
+
+export async function claimEngagement(tweetId: string, eventType: string): Promise<boolean> {
+  const rows = await db
+    .insert(engagementLog)
+    .values({ tweetId, eventType })
+    .onConflictDoNothing()
+    .returning({ tweetId: engagementLog.tweetId });
+  return rows.length > 0;
+}
+
+export function markEngagementReplied(tweetId: string, replyTweetId: string) {
+  return db
+    .update(engagementLog)
+    .set({ status: "replied", replyTweetId })
+    .where(eq(engagementLog.tweetId, tweetId));
+}
+
+export function markEngagementSkipped(tweetId: string, skipReason: string) {
+  return db
+    .update(engagementLog)
+    .set({ status: "skipped", skipReason })
+    .where(eq(engagementLog.tweetId, tweetId));
+}
+
+export function markEngagementFailed(tweetId: string, error: string) {
+  return db
+    .update(engagementLog)
+    .set({ status: "failed", error })
+    .where(eq(engagementLog.tweetId, tweetId));
 }
