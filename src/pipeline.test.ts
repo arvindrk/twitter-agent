@@ -1,6 +1,10 @@
 import { describe, it, expect, mock, beforeAll } from "bun:test";
 import { makePost, makeScheduleItem } from "./test/helpers.js";
 
+mock.module("./db/posts.repo.js", () => ({
+  insertScheduledPosts: async () => [{ id: 1 }],
+}));
+
 mock.module("./agents/researcher.js", () => ({
   runResearcher: mock(async () => "mock brief"),
 }));
