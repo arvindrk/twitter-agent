@@ -64,7 +64,7 @@ const engagementSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("reply"),
-    content: z.string().describe("Reply text, ≤280 characters, ready to post."),
+    content: z.string().max(280).describe("Reply text, ≤280 characters, ready to post."),
     stance: z
       .enum(["close", "probe"])
       .describe(
@@ -110,11 +110,21 @@ export async function runEngagementAgent(mention: {
   });
   let decision: EngagementDecision = object;
   if (decision.action === "reply" && decision.content.length > 280) {
-    const truncated = decision.content.slice(0, 277) + "...";
-    console.warn(
-      `[engagement] → content truncated ${decision.content.length}→${truncated.length}c`,
-    );
-    decision = { ...decision, content: truncated };
+    console.warn(`[engagement] → reply over limit (${decision.content.length}c), retrying`);
+    const { object: retried } = await generateObject({
+      model: xai("grok-4-latest"),
+      system: SYSTEM,
+      messages: [
+        { role: "user", content: buildUserMessage(mention) },
+        { role: "assistant", content: JSON.stringify(object) },
+        {
+          role: "user",
+          content: `Your reply was ${decision.content.length} characters. Must be ≤280. Rewrite it — cut words, not meaning.`,
+        },
+      ],
+      schema: engagementSchema,
+    });
+    decision = retried;
   }
   console.log(
     `[engagement] → agent action=${object.action} in:${usage.inputTokens} out:${usage.outputTokens}`,
