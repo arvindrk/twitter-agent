@@ -1,4 +1,4 @@
-# X Agent
+# X (Twitter) AI Agent - Autonomous Posting & Engagement
 
 <p align="center">
   <a href="https://github.com/arvindrk/twitter-agent/actions/workflows/ci.yml">
@@ -81,7 +81,7 @@ bun run test:cron:execute-post
 | `X_USER_ID`             | Numeric user ID (filters self-events on webhooks) |
 | `X_BEARER_TOKEN`        | App-only bearer token (thread context hydration)  |
 | `DATABASE_URL`          | Neon Postgres connection string                   |
-| `CRON_SECRET`           | Shared secret for cron HTTP routes                |
+| `CRON_SECRET`           | **Required.** Shared secret for `/cron/*` routes  |
 
 ## HTTP API
 
@@ -93,7 +93,7 @@ bun run test:cron:execute-post
 | GET    | `/webhooks/x`        | X CRC handshake                                              |
 | POST   | `/webhooks/x`        | Incoming mention/reply events (HMAC-verified)                |
 
-Cron routes require `x-cron-secret` header or `?secret=` query param.
+Cron routes require the `x-cron-secret` header. Query-param auth is not supported (avoids leaking secrets to access logs).
 
 ## Deployment
 

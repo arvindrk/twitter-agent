@@ -14,6 +14,7 @@
 		"test:cron:daily": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X GET http://localhost:3010/cron/daily -H \"x-cron-secret:$CRON_SECRET\"",
 		"test:cron:execute-post": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:$CRON_SECRET\" -d '{\"postId\":1,\"content\":\"test content\",\"type\":\"single\"}'",
 		"test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:$CRON_SECRET\"",
+		"audit": "bun audit",
 		"prepare": "[ -d .git ] && husky || true"
 	},
 	"lint-staged": {
@@ -27,7 +28,7 @@
 		"@xdevplatform/xdk": "^0.5.0",
 		"ai": "^5.0.0",
 		"drizzle-orm": "^0.45.2",
-		"hono": "^4.12.12",
+		"hono": "^4.12.14",
 		"zod": "^4"
 	},
 	"devDependencies": {

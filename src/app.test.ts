@@ -73,10 +73,12 @@ const authed = { headers: { "x-cron-secret": "test-secret" } };
 const cronUrl = (path: string) => `http://localhost${path}`;
 
 describe("isAuthorized — middleware", () => {
-	it("allows requests when CRON_SECRET env is not set", async () => {
+	it("rejects cron requests when CRON_SECRET env is not set (fail-closed)", async () => {
 		delete process.env.CRON_SECRET;
-		const res = await app.request(cronUrl("/"), { method: "GET" });
-		expect(res.status).toBe(200);
+		const res = await app.request(cronUrl("/cron/daily"), {
+			method: "GET",
+		});
+		expect(res.status).toBe(401);
 		process.env.CRON_SECRET = "test-secret";
 	});
 
@@ -88,20 +90,28 @@ describe("isAuthorized — middleware", () => {
 		expect(res.status).toBe(202);
 	});
 
-	it("allows requests with correct secret as query param", async () => {
+	it("rejects requests with secret in query param (header-only)", async () => {
 		const res = await app.request(
 			cronUrl("/cron/daily?secret=test-secret"),
 			{
 				method: "GET",
 			},
 		);
-		expect(res.status).toBe(202);
+		expect(res.status).toBe(401);
 	});
 
 	it("rejects requests with wrong secret", async () => {
 		const res = await app.request(cronUrl("/cron/daily"), {
 			method: "GET",
 			headers: { "x-cron-secret": "wrong" },
+		});
+		expect(res.status).toBe(401);
+	});
+
+	it("rejects requests with wrong-length secret (constant-time guard)", async () => {
+		const res = await app.request(cronUrl("/cron/daily"), {
+			method: "GET",
+			headers: { "x-cron-secret": "test-secret-but-longer" },
 		});
 		expect(res.status).toBe(401);
 	});
@@ -262,10 +272,12 @@ function mentionPayload(tweetId = "tw-1", authorId = "user-99") {
 }
 
 describe("GET /webhooks/x", () => {
+	const VALID_CRC = "MmNiOWE0ZTktNDIzZS00ZjAyLTk5OWY";
+
 	it("returns sha256 CRC response for valid crc_token", async () => {
 		const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET });
 		const res = await app.request(
-			"http://localhost/webhooks/x?crc_token=abc123",
+			`http://localhost/webhooks/x?crc_token=${VALID_CRC}`,
 		);
 		restore();
 		expect(res.status).toBe(200);
@@ -274,13 +286,32 @@ describe("GET /webhooks/x", () => {
 		const expectedToken =
 			"sha256=" +
 			createHmac("sha256", WEBHOOK_SECRET)
-				.update("abc123")
+				.update(VALID_CRC)
 				.digest("base64");
 		expect(body.response_token).toBe(expectedToken);
 	});
 
 	it("returns 400 when crc_token is missing", async () => {
 		const res = await app.request("http://localhost/webhooks/x");
+		expect(res.status).toBe(400);
+	});
+
+	it("rejects crc_token containing JSON characters (oracle defense)", async () => {
+		const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET });
+		const forgedBody = mentionPayload();
+		const res = await app.request(
+			`http://localhost/webhooks/x?crc_token=${encodeURIComponent(forgedBody)}`,
+		);
+		restore();
+		expect(res.status).toBe(400);
+	});
+
+	it("rejects crc_token shorter than 8 chars", async () => {
+		const restore = stubEnv({ X_API_SECRET: WEBHOOK_SECRET });
+		const res = await app.request(
+			"http://localhost/webhooks/x?crc_token=short",
+		);
+		restore();
 		expect(res.status).toBe(400);
 	});
 });
