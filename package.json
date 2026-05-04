@@ -21,12 +21,12 @@
 		"*.{ts,js,json,md}": "prettier --write"
 	},
 	"dependencies": {
-		"@ai-sdk/xai": "^2.0.0",
+		"@ai-sdk/xai": "^3.0.87",
 		"@dotenvx/dotenvx": "^1.61.0",
 		"@hono/node-server": "^2.0.1",
 		"@neondatabase/serverless": "^1.0.2",
 		"@xdevplatform/xdk": "^0.5.0",
-		"ai": "^5.0.0",
+		"ai": "^6.0.174",
 		"drizzle-orm": "^0.45.2",
 		"hono": "^4.12.14",
 		"zod": "^4"
