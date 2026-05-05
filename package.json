@@ -17,6 +17,9 @@
 		"audit": "bun audit",
 		"prepare": "[ -d .git ] && husky || true"
 	},
+	"engines": {
+		"bun": ">=1.3.0"
+	},
 	"lint-staged": {
 		"*.{ts,js,json,md}": "prettier --write"
 	},
