@@ -4,7 +4,6 @@ package-lock.json
 .env
 .env.keys
 
-.vercel
 *.pem
 AGENTS.md
 CLAUDE.md
