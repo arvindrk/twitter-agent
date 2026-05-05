@@ -1,9 +1,7 @@
 import { describe, it, expect, mock, beforeAll, beforeEach } from "bun:test";
 import { stubDbModule, stubXModule, makeDbPost } from "../test/helpers.js";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db: Record<string, any> = { ...stubDbModule };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const x: Record<string, any> = { ...stubXModule };
 
 mock.module("../db/posts.repo.js", () => ({

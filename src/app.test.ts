@@ -10,11 +10,9 @@ import {
 import { stubEnv } from "./test/helpers.js";
 import { createHmac } from "node:crypto";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pipeline: Record<string, any> = {
 	runDailyWorkflowAndPersist: async () => ({ count: 0, ids: [] }),
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const publisher: Record<string, any> = {
 	publishDuePosts: async () => ({ processed: 0, skipped: 0, failed: [] }),
 	publishSinglePost: async () => ({
@@ -24,7 +22,6 @@ const publisher: Record<string, any> = {
 		tweetUrl: "https://x.com/i/web/status/tweet-123",
 	}),
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const engagement: Record<string, any> = {
 	processEngagementEvent: async () => {},
 };

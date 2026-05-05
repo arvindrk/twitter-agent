@@ -1,0 +1,16 @@
+{
+	"plugins": ["typescript"],
+	"rules": {
+		"eqeqeq": "error",
+		"no-unused-vars": "warn",
+		"no-console": "warn"
+	},
+	"overrides": [
+		{
+			"files": ["**/*.test.ts"],
+			"rules": {
+				"typescript/no-explicit-any": "off"
+			}
+		}
+	]
+}
