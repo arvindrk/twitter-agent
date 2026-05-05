@@ -16,6 +16,7 @@
 		"test:cron:scan": "dotenvx run -- curl -s -w '\\nHTTP %{http_code}' -X POST http://localhost:3010/cron/execute-post -H 'Content-Type: application/json' -H \"x-cron-secret:$CRON_SECRET\"",
 		"lint": "oxlint src",
 		"lint:fix": "oxlint src --fix",
+		"check:cycles": "madge --circular --extensions ts src",
 		"deadcode": "knip --reporter compact",
 		"audit": "bun audit",
 		"prepare": "[ -d .git ] && husky || true"
@@ -48,6 +49,7 @@
 		"husky": "^9.1.7",
 		"knip": "^6.11.0",
 		"lint-staged": "^16.4.0",
+		"madge": "^8.0.0",
 		"oxlint": "^1.62.0",
 		"prettier": "^3.8.3",
 		"typescript": "^6.0.2"
