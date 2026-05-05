@@ -84,7 +84,7 @@ const inboundEngagementSchema = z.object({
 		.describe("Brief rationale for the like and reply decisions."),
 });
 
-export type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
+type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
 
 function sanitizeUntrusted(s: string): string {
 	return s.replace(/[\x00-\x1f\x7f]/g, " ").replace(/<\/?untrusted>/gi, "");

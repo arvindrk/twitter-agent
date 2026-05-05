@@ -19,9 +19,9 @@ type PublishSuccess = {
 type PublishSkipped = { ok: true; status: "skipped" };
 type PublishFailure = { ok: false; error: string; httpStatus: 500 | 501 };
 
-export type SinglePostResult = PublishSuccess | PublishSkipped | PublishFailure;
+type SinglePostResult = PublishSuccess | PublishSkipped | PublishFailure;
 
-export type ScanResult = {
+type ScanResult = {
 	processed: number;
 	skipped: number;
 	failed: { id: number; error: string }[];
