@@ -116,6 +116,7 @@ export async function searchTweets(
 				likeCount: tweet.publicMetrics?.likeCount ?? 0,
 				retweetCount: tweet.publicMetrics?.retweetCount ?? 0,
 				authorFollowerCount: author?.publicMetrics?.followersCount ?? 0,
+				replySettings: "everyone",
 			};
 		});
 	} catch {
@@ -141,6 +142,38 @@ export async function retweetPost(tweetId: string): Promise<void> {
 		typeof xClient.users.repostPost
 	>[1]);
 	console.log(`[x] Retweeted tweet ${tweetId}`);
+}
+
+export async function getHomeFeed(maxResults = 50): Promise<SearchedTweet[]> {
+	const userId = process.env.X_USER_ID;
+	if (!userId) return [];
+	try {
+		console.log(`[x] Fetching home feed (max ${maxResults})...`);
+		const raw = await xClient.users.getTimeline(userId, {
+			expansions: ["author_id"],
+			userFields: ["username", "public_metrics"],
+			tweetFields: ["public_metrics"],
+			maxResults,
+			exclude: ["retweets"],
+		});
+		const data = raw as SearchRecentData;
+		const users = data.includes?.users ?? [];
+		const userMap = new Map(users.map((u) => [u.id, u]));
+		return (data.data ?? []).map((tweet) => {
+			const author = userMap.get(tweet.authorId ?? "");
+			return {
+				tweetId: tweet.id,
+				authorId: tweet.authorId ?? "",
+				authorHandle: author?.username ?? "",
+				text: tweet.text,
+				likeCount: tweet.publicMetrics?.likeCount ?? 0,
+				retweetCount: tweet.publicMetrics?.retweetCount ?? 0,
+				authorFollowerCount: author?.publicMetrics?.followersCount ?? 0,
+			};
+		});
+	} catch {
+		return [];
+	}
 }
 
 export async function getFollowingHandles(limit = 100): Promise<string[]> {
