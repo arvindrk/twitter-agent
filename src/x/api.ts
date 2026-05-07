@@ -26,14 +26,14 @@ type SearchRecentData = {
 	data?: Array<{
 		id: string;
 		text: string;
-		public_metrics?: { like_count: number; retweet_count: number };
-		author_id?: string;
+		publicMetrics?: { likeCount: number; retweetCount: number };
+		authorId?: string;
 	}>;
 	includes?: {
 		users?: Array<{
 			id: string;
 			username: string;
-			public_metrics?: { followers_count: number };
+			publicMetrics?: { followersCount: number };
 		}>;
 	};
 };
@@ -107,16 +107,15 @@ export async function searchTweets(
 		const users = data.includes?.users ?? [];
 		const userMap = new Map(users.map((u) => [u.id, u]));
 		return (data.data ?? []).map((tweet) => {
-			const author = userMap.get(tweet.author_id ?? "");
+			const author = userMap.get(tweet.authorId ?? "");
 			return {
 				tweetId: tweet.id,
-				authorId: tweet.author_id ?? "",
+				authorId: tweet.authorId ?? "",
 				authorHandle: author?.username ?? "",
 				text: tweet.text,
-				likeCount: tweet.public_metrics?.like_count ?? 0,
-				retweetCount: tweet.public_metrics?.retweet_count ?? 0,
-				authorFollowerCount:
-					author?.public_metrics?.followers_count ?? 0,
+				likeCount: tweet.publicMetrics?.likeCount ?? 0,
+				retweetCount: tweet.publicMetrics?.retweetCount ?? 0,
+				authorFollowerCount: author?.publicMetrics?.followersCount ?? 0,
 			};
 		});
 	} catch {
