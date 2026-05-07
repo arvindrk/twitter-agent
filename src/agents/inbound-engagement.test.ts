@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, beforeAll } from "bun:test";
+import { isReplySafe } from "./safety.js";
 
 const mockXai = mock((modelId: string) => ({ id: modelId }));
 const mockGenerateObject = mock(async () => ({
@@ -24,11 +25,9 @@ type Mention = {
 };
 
 let runInboundEngagementAgent: (mention: Mention) => Promise<unknown>;
-let isReplySafe: (content: string) => boolean;
 
 beforeAll(async () => {
-	({ runInboundEngagementAgent, isReplySafe } =
-		await import("./inbound-engagement.js"));
+	({ runInboundEngagementAgent } = await import("./inbound-engagement.js"));
 });
 
 describe("runInboundEngagementAgent", () => {
