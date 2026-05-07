@@ -15,6 +15,13 @@
       "when": 1777702532377,
       "tag": "0001_futuristic_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778123408706,
+      "tag": "0002_perfect_sentinel",
+      "breakpoints": true
     }
   ]
 }
