@@ -18,10 +18,8 @@ const db: Record<string, any> = {
 	logOutboundAction: async () => {},
 };
 const x: Record<string, any> = {
-	searchTweets: async () => [],
-	getFollowingHandles: async () => [],
+	getHomeFeed: async () => [],
 	likeTweet: async () => {},
-	replyToTweet: async () => ({ id: "reply-1" }),
 	retweetPost: async () => {},
 	followUser: async () => {},
 };
@@ -55,10 +53,8 @@ mock.module("../db/outbound-engagement.repo.js", () => ({
 }));
 
 mock.module("../x/api.js", () => ({
-	searchTweets: (...a: unknown[]) => x.searchTweets(...a),
-	getFollowingHandles: (...a: unknown[]) => x.getFollowingHandles(...a),
+	getHomeFeed: (...a: unknown[]) => x.getHomeFeed(...a),
 	likeTweet: (...a: unknown[]) => x.likeTweet(...a),
-	replyToTweet: (...a: unknown[]) => x.replyToTweet(...a),
 	retweetPost: (...a: unknown[]) => x.retweetPost(...a),
 	followUser: (...a: unknown[]) => x.followUser(...a),
 }));
@@ -86,7 +82,6 @@ mock.module("./engagement.js", () => ({
 type RunResult = {
 	liked: number;
 	retweeted: number;
-	replied: number;
 	followed: number;
 	skipped: number;
 };
@@ -110,10 +105,8 @@ const defaultDb = {
 	logOutboundAction: async () => {},
 };
 const defaultX = {
-	searchTweets: async () => [],
-	getFollowingHandles: async () => [],
+	getHomeFeed: async () => [],
 	likeTweet: async () => {},
-	replyToTweet: async () => ({ id: "reply-1" }),
 	retweetPost: async () => {},
 	followUser: async () => {},
 };
@@ -141,11 +134,8 @@ function makeTweet(overrides: Partial<SearchedTweet> = {}): SearchedTweet {
 function makeDecision(tweet: SearchedTweet, overrides: object = {}) {
 	return {
 		tweetId: tweet.tweetId,
-		authorId: tweet.authorId,
-		authorHandle: tweet.authorHandle,
 		like: true,
 		retweet: false,
-		reply: null,
 		follow: false,
 		reason: "test decision",
 		...overrides,
@@ -155,15 +145,13 @@ function makeDecision(tweet: SearchedTweet, overrides: object = {}) {
 describe("runOutboundEngagement — meetsSignalThreshold", () => {
 	it("drops tweets below the signal threshold and returns all zeros", async () => {
 		const lowSignal = makeTweet({ likeCount: 5 }); // fails likeCount >= 10
-		x.searchTweets = async () => [lowSignal];
-		x.getFollowingHandles = async () => [];
+		x.getHomeFeed = async () => [lowSignal];
 
 		const result = await runOutboundEngagement();
 
 		expect(result).toEqual({
 			liked: 0,
 			retweeted: 0,
-			replied: 0,
 			followed: 0,
 			skipped: 0,
 		});
@@ -171,7 +159,7 @@ describe("runOutboundEngagement — meetsSignalThreshold", () => {
 });
 
 describe("runOutboundEngagement — applyConstraints caps", () => {
-	it("respects per-run caps: likes<=10, retweets<=3, replies<=5, follows<=3", async () => {
+	it("respects per-run caps: likes<=10, retweets<=3, follows<=3", async () => {
 		const tweets = Array.from({ length: 15 }, (_, i) =>
 			makeTweet({
 				tweetId: `tweet-${i + 1}`,
@@ -180,15 +168,13 @@ describe("runOutboundEngagement — applyConstraints caps", () => {
 			}),
 		);
 
-		x.searchTweets = async () => tweets;
-		x.getFollowingHandles = async () => [];
+		x.getHomeFeed = async () => tweets;
 
 		agent.runOutboundEngagementAgent = async () =>
 			tweets.map((t) =>
 				makeDecision(t, {
 					like: true,
 					retweet: true,
-					reply: { content: "Solid take." },
 					follow: true,
 				}),
 			);
@@ -197,16 +183,14 @@ describe("runOutboundEngagement — applyConstraints caps", () => {
 
 		expect(result.liked).toBeLessThanOrEqual(10);
 		expect(result.retweeted).toBeLessThanOrEqual(3);
-		expect(result.replied).toBeLessThanOrEqual(5);
 		expect(result.followed).toBeLessThanOrEqual(3);
 	});
 });
 
 describe("runOutboundEngagement — applyConstraints cooldown", () => {
-	it("nulls reply and follow for cooled-down authors but still processes like", async () => {
+	it("nulls follow for cooled-down authors but still processes like", async () => {
 		const tweet = makeTweet({ tweetId: "tweet-cd", authorId: "author-cd" });
-		x.searchTweets = async () => [tweet];
-		x.getFollowingHandles = async () => [];
+		x.getHomeFeed = async () => [tweet];
 
 		db.getCooledDownAuthorIds = async () => new Set(["author-cd"]);
 
@@ -214,7 +198,6 @@ describe("runOutboundEngagement — applyConstraints cooldown", () => {
 			makeDecision(tweet, {
 				like: true,
 				retweet: false,
-				reply: { content: "hi" },
 				follow: true,
 			}),
 		];
@@ -222,7 +205,6 @@ describe("runOutboundEngagement — applyConstraints cooldown", () => {
 		const result = await runOutboundEngagement();
 
 		expect(result.liked).toBe(1);
-		expect(result.replied).toBe(0);
 		expect(result.followed).toBe(0);
 	});
 });
@@ -233,8 +215,7 @@ describe("runOutboundEngagement — X API error handling", () => {
 			tweetId: "tweet-err",
 			authorId: "author-err",
 		});
-		x.searchTweets = async () => [tweet];
-		x.getFollowingHandles = async () => [];
+		x.getHomeFeed = async () => [tweet];
 
 		x.likeTweet = mock(async () => {
 			throw new Error("rate limited");
