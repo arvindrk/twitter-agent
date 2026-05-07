@@ -5,6 +5,7 @@ import {
 	timestamp,
 	pgEnum,
 	boolean,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const postTypeEnum = pgEnum("post_type", ["single", "thread"]);
@@ -26,6 +27,12 @@ export const engagementStatusEnum = pgEnum("engagement_status", [
 	"replied",
 	"skipped",
 	"failed",
+]);
+export const outboundActionEnum = pgEnum("outbound_action", [
+	"like",
+	"retweet",
+	"reply",
+	"follow",
 ]);
 
 export const scheduledPosts = pgTable("scheduled_posts", {
@@ -58,5 +65,23 @@ export const engagementLog = pgTable("engagement_log", {
 		.defaultNow(),
 });
 
+export const outboundEngagementLog = pgTable(
+	"outbound_engagement_log",
+	{
+		id: serial("id").primaryKey(),
+		tweetId: text("tweet_id").notNull(),
+		authorId: text("author_id").notNull(),
+		authorHandle: text("author_handle").notNull(),
+		action: outboundActionEnum("action").notNull(),
+		replyTweetId: text("reply_tweet_id"),
+		error: text("error"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.notNull()
+			.defaultNow(),
+	},
+	(t) => [uniqueIndex("outbound_uniq").on(t.tweetId, t.action)],
+);
+
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;
 export type EngagementLog = typeof engagementLog.$inferSelect;
+export type OutboundEngagementLog = typeof outboundEngagementLog.$inferSelect;
