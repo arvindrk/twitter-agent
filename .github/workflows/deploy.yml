@@ -52,5 +52,5 @@ jobs:
                      aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }} && \
                      ECR_IMAGE=${{ steps.build.outputs.image }} docker compose pull && \
                      ECR_IMAGE=${{ steps.build.outputs.image }} docker compose up -d && \
-                     docker image prune -f"
+                     docker image prune -af"
                   rm /tmp/ec2_key.pem
