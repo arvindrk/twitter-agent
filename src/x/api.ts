@@ -5,37 +5,11 @@ export interface ThreadNode {
 	text: string;
 }
 
-export interface SearchedTweet {
-	tweetId: string;
-	authorId: string;
-	authorHandle: string;
-	text: string;
-	likeCount: number;
-	retweetCount: number;
-	authorFollowerCount: number;
-}
-
 type XApiResponse = { data?: { id?: string } };
 
 type TwitterApiData = {
 	data?: { text: string; referenced_tweets?: { type: string; id: string }[] };
 	includes?: { users?: { username: string }[] };
-};
-
-type SearchRecentData = {
-	data?: Array<{
-		id: string;
-		text: string;
-		public_metrics?: { like_count: number; retweet_count: number };
-		author_id?: string;
-	}>;
-	includes?: {
-		users?: Array<{
-			id: string;
-			username: string;
-			public_metrics?: { followers_count: number };
-		}>;
-	};
 };
 
 function validateText(text: string, label: string): void {
@@ -87,76 +61,6 @@ export async function likeTweet(tweetId: string): Promise<void> {
 		typeof xClient.users.likePost
 	>[1]);
 	console.log(`[x] Liked tweet ${tweetId}`);
-}
-
-export async function searchTweets(
-	query: string,
-	maxResults = 10,
-): Promise<SearchedTweet[]> {
-	try {
-		console.log(`[x] Searching tweets: "${query}" (max ${maxResults})...`);
-		const raw = await xClient.posts.searchRecent(query, {
-			query: {
-				expansions: "author_id",
-				"user.fields": "username,public_metrics",
-				"tweet.fields": "public_metrics",
-				max_results: maxResults,
-			},
-		} as Parameters<typeof xClient.posts.searchRecent>[1]);
-		const data = raw as SearchRecentData;
-		const users = data.includes?.users ?? [];
-		const userMap = new Map(users.map((u) => [u.id, u]));
-		return (data.data ?? []).map((tweet) => {
-			const author = userMap.get(tweet.author_id ?? "");
-			return {
-				tweetId: tweet.id,
-				authorId: tweet.author_id ?? "",
-				authorHandle: author?.username ?? "",
-				text: tweet.text,
-				likeCount: tweet.public_metrics?.like_count ?? 0,
-				retweetCount: tweet.public_metrics?.retweet_count ?? 0,
-				authorFollowerCount:
-					author?.public_metrics?.followers_count ?? 0,
-			};
-		});
-	} catch {
-		return [];
-	}
-}
-
-export async function followUser(targetUserId: string): Promise<void> {
-	const userId = process.env.X_USER_ID;
-	if (!userId) throw new Error("Missing env var: X_USER_ID");
-	console.log(`[x] Following user ${targetUserId}...`);
-	await xClient.users.followUser(userId, {
-		body: { targetUserId },
-	} as Parameters<typeof xClient.users.followUser>[1]);
-	console.log(`[x] Followed user ${targetUserId}`);
-}
-
-export async function retweetPost(tweetId: string): Promise<void> {
-	const userId = process.env.X_USER_ID;
-	if (!userId) throw new Error("Missing env var: X_USER_ID");
-	console.log(`[x] Retweeting tweet ${tweetId}...`);
-	await xClient.users.repostPost(userId, { body: { tweetId } } as Parameters<
-		typeof xClient.users.repostPost
-	>[1]);
-	console.log(`[x] Retweeted tweet ${tweetId}`);
-}
-
-export async function getFollowingHandles(limit = 100): Promise<string[]> {
-	const userId = process.env.X_USER_ID;
-	if (!userId) return [];
-	try {
-		console.log(`[x] Fetching following list (limit ${limit})...`);
-		const raw = await xClient.users.getFollowing(userId, {
-			query: { max_results: limit },
-		} as Parameters<typeof xClient.users.getFollowing>[1]);
-		const data = raw as { data?: Array<{ username: string }> };
-		return (data.data ?? []).map((u) => u.username);
-	} catch {
-		return [];
-	}
 }
 
 export async function fetchThreadContext(

@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { isAuthorized } from "../middleware/auth.js";
-import { runOutboundEngagement } from "../services/outbound-engagement.js";
 import { runDailyWorkflowAndPersist } from "../services/pipeline.js";
 import { publishDuePosts, publishSinglePost } from "../services/publisher.js";
 
@@ -50,30 +49,6 @@ cron.post("/execute-post", async (c) => {
 		tweetId: result.tweetId,
 		tweetUrl: result.tweetUrl,
 	});
-});
-
-cron.post("/outbound-engagement", async (c) => {
-	if (!isAuthorized(c.req.raw))
-		return c.json({ ok: false, error: "Unauthorized" }, 401);
-
-	const runId = crypto.randomUUID();
-	console.log(`[cron/outbound-engagement] starting run ${runId}`);
-
-	runOutboundEngagement()
-		.then((counts) =>
-			console.log(
-				`[cron/outbound-engagement] run ${runId} complete —`,
-				counts,
-			),
-		)
-		.catch((err: unknown) =>
-			console.error(
-				`[cron/outbound-engagement] run ${runId} failed:`,
-				err instanceof Error ? err.message : err,
-			),
-		);
-
-	return c.json({ ok: true, runId }, 202);
 });
 
 export default cron;

@@ -2,7 +2,6 @@ import { generateObject } from "ai";
 import { xai } from "@ai-sdk/xai";
 import { z } from "zod";
 import type { ThreadNode } from "../x/index.js";
-import { sanitizeUntrusted, isReplySafe } from "./safety.js";
 
 const SYSTEM = `
 You handle real-time engagement for an AI engineer's X account. When someone mentions the account, you make two independent decisions: whether to like, and whether to reply.
@@ -86,6 +85,20 @@ const inboundEngagementSchema = z.object({
 });
 
 type InboundEngagementDecision = z.infer<typeof inboundEngagementSchema>;
+
+function sanitizeUntrusted(s: string): string {
+	return s.replace(/[\x00-\x1f\x7f]/g, " ").replace(/<\/?untrusted>/gi, "");
+}
+
+const AI_DISCLOSURE_PATTERNS: RegExp[] = [
+	/\bI(?:'m| am| was| have been| being)\s+(?:an?\s+)?(?:AI|bot|chatbot|language model|automated|assistant|LLM|machine|AGI)\b/i,
+	/\bI(?:'m| am)\s+(?:powered by|built (?:on|with)|running on|trained by)\b/i,
+	/\bas an?\s+(?:AI|language model|chatbot|machine learning|automated)\b/i,
+];
+
+export function isReplySafe(content: string): boolean {
+	return !AI_DISCLOSURE_PATTERNS.some((p) => p.test(content));
+}
 
 function buildUserMessage(mention: {
 	authorHandle: string;
