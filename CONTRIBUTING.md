@@ -13,6 +13,7 @@ git clone https://github.com/arvindrk/twitter-agent.git
 cd twitter-agent
 bun install
 cp .env.example .env  # fill in your API keys
+bunx drizzle-kit push # apply DB schema
 ```
 
 ## Development
@@ -25,16 +26,16 @@ bun run test      # run the full test suite (no API tokens used)
 
 ## Project structure
 
-| Path              | What lives here                                          |
-| ----------------- | -------------------------------------------------------- |
-| `src/agents/`     | LLM functions: researcher, writer, scheduler, engagement |
-| `src/services/`   | Orchestration: pipeline, publisher, engagement handler   |
-| `src/routes/`     | Hono HTTP routes: cron, webhooks                         |
-| `src/middleware/` | Auth middleware (cron secret verification)               |
-| `src/db/`         | Drizzle schema, Neon client, post/engagement repos       |
-| `src/x/`          | X (Twitter) OAuth1 client and API wrapper                |
-| `src/test/`       | Shared test helpers and mock factories                   |
-| `scripts/`        | One-off run and test scripts                             |
+| Path              | What lives here                                                           |
+| ----------------- | ------------------------------------------------------------------------- |
+| `src/agents/`     | LLM functions: researcher, writer, scheduler, inbound/outbound engagement |
+| `src/services/`   | Orchestration: pipeline, publisher, inbound/outbound engagement handlers  |
+| `src/routes/`     | Hono HTTP routes: cron, webhooks                                          |
+| `src/middleware/` | Auth middleware (cron secret verification)                                |
+| `src/db/`         | Drizzle schema, Neon client, post/engagement/outbound-engagement repos    |
+| `src/x/`          | X (Twitter) OAuth1 client and API wrapper                                 |
+| `src/test/`       | Shared test helpers and mock factories                                    |
+| `scripts/`        | One-off run and test scripts                                              |
 
 ## Making changes
 
