@@ -6,11 +6,8 @@ const mockGenerateObject = mock(async () => ({
 		decisions: [
 			{
 				tweetId: "tweet1",
-				authorId: "author1",
-				authorHandle: "handle1",
 				like: true,
 				retweet: false,
-				reply: null,
 				follow: false,
 				reason: "good content",
 			},
@@ -35,11 +32,8 @@ type CandidateTweet = {
 
 type OutboundDecision = {
 	tweetId: string;
-	authorId: string;
-	authorHandle: string;
 	like: boolean;
 	retweet: boolean;
-	reply: { content: string } | null;
 	follow: boolean;
 	reason: string;
 };
@@ -61,11 +55,8 @@ function makeCandidate(overrides?: Partial<CandidateTweet>): CandidateTweet {
 function makeDecision(overrides?: Partial<OutboundDecision>): OutboundDecision {
 	return {
 		tweetId: "tweet1",
-		authorId: "author1",
-		authorHandle: "handle1",
 		like: true,
 		retweet: false,
-		reply: null,
 		follow: false,
 		reason: "good content",
 		...overrides,
@@ -81,59 +72,6 @@ beforeAll(async () => {
 });
 
 describe("runOutboundEngagementAgent", () => {
-	it("blocks reply containing AI-disclosure text", async () => {
-		mockGenerateObject.mockImplementationOnce(
-			async () =>
-				({
-					object: {
-						decisions: [
-							makeDecision({
-								reply: {
-									content: "I am an AI assistant helping you",
-								},
-								reason: "answered question",
-							}),
-						],
-					},
-					usage: { inputTokens: 5, outputTokens: 5 },
-				}) as never,
-		);
-		const results = await runOutboundEngagementAgent([makeCandidate()]);
-		expect(results[0].reply).toBeNull();
-		expect(results[0].reason).toContain("[blocked: AI-disclosure pattern]");
-	});
-
-	it("retries and accepts short reply when initial reply exceeds 280 chars", async () => {
-		const longReply = "x".repeat(300);
-		const shortReply = "Short reply under 280 chars.";
-
-		mockGenerateObject.mockImplementationOnce(
-			async () =>
-				({
-					object: {
-						decisions: [
-							makeDecision({ reply: { content: longReply } }),
-						],
-					},
-					usage: { inputTokens: 10, outputTokens: 10 },
-				}) as never,
-		);
-		mockGenerateObject.mockImplementationOnce(
-			async () =>
-				({
-					object: {
-						decisions: [
-							makeDecision({ reply: { content: shortReply } }),
-						],
-					},
-					usage: { inputTokens: 10, outputTokens: 10 },
-				}) as never,
-		);
-
-		const results = await runOutboundEngagementAgent([makeCandidate()]);
-		expect(results[0].reply?.content).toBe(shortReply);
-	});
-
 	it("returns one decision per candidate", async () => {
 		const candidates = [
 			makeCandidate({
@@ -157,21 +95,9 @@ describe("runOutboundEngagementAgent", () => {
 				({
 					object: {
 						decisions: [
-							makeDecision({
-								tweetId: "t1",
-								authorId: "a1",
-								authorHandle: "h1",
-							}),
-							makeDecision({
-								tweetId: "t2",
-								authorId: "a2",
-								authorHandle: "h2",
-							}),
-							makeDecision({
-								tweetId: "t3",
-								authorId: "a3",
-								authorHandle: "h3",
-							}),
+							makeDecision({ tweetId: "t1" }),
+							makeDecision({ tweetId: "t2" }),
+							makeDecision({ tweetId: "t3" }),
 						],
 					},
 					usage: { inputTokens: 15, outputTokens: 15 },
