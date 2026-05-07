@@ -25,6 +25,15 @@ const publisher: Record<string, any> = {
 const engagement: Record<string, any> = {
 	processEngagementEvent: async () => {},
 };
+const outboundEngagement: Record<string, any> = {
+	runOutboundEngagement: async () => ({
+		liked: 0,
+		retweeted: 0,
+		replied: 0,
+		followed: 0,
+		skipped: 0,
+	}),
+};
 
 // Wrapper functions so named imports in routes always delegate to current values.
 mock.module("./services/pipeline.js", () => ({
@@ -38,6 +47,10 @@ mock.module("./services/publisher.js", () => ({
 mock.module("./services/engagement.js", () => ({
 	processEngagementEvent: (...a: unknown[]) =>
 		engagement.processEngagementEvent(...a),
+}));
+mock.module("./services/outbound-engagement.js", () => ({
+	runOutboundEngagement: (...a: unknown[]) =>
+		outboundEngagement.runOutboundEngagement(...a),
 }));
 
 let app: import("hono").Hono;
