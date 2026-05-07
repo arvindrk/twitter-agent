@@ -1,4 +1,4 @@
-import { and, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { db } from "./client.js";
 import { outboundEngagementLog } from "./schema.js";
 
@@ -16,7 +16,7 @@ export async function getAlreadyActedPairs(
 		.where(
 			and(
 				inArray(outboundEngagementLog.tweetId, tweetIds),
-				inArray(outboundEngagementLog.action, actions),
+				inArray(sql`${outboundEngagementLog.action}::text`, actions),
 			),
 		);
 	return new Set(rows.map((r) => `${r.tweetId}:${r.action}`));
@@ -33,7 +33,10 @@ export async function getCooledDownAuthorIds(
 		.where(
 			and(
 				inArray(outboundEngagementLog.authorId, authorIds),
-				inArray(outboundEngagementLog.action, ["reply", "follow"]),
+				inArray(sql`${outboundEngagementLog.action}::text`, [
+					"reply",
+					"follow",
+				]),
 				gt(
 					outboundEngagementLog.createdAt,
 					sql`now() - (${windowHours} * interval '1 hour')`,
@@ -53,7 +56,7 @@ export async function getFollowedAuthorIds(
 		.where(
 			and(
 				inArray(outboundEngagementLog.authorId, authorIds),
-				inArray(outboundEngagementLog.action, ["follow"]),
+				eq(sql`${outboundEngagementLog.action}::text`, "follow"),
 			),
 		);
 	return new Set(rows.map((r) => r.authorId));
