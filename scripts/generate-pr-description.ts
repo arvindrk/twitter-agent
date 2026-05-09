@@ -2,6 +2,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const PR_NUMBER = process.env.PR_NUMBER;
 const PR_TITLE = process.env.PR_TITLE ?? "";
+const PR_AUTHOR = process.env.PR_AUTHOR;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const PR_DESCRIPTION_MODEL = process.env.PR_DESCRIPTION_MODEL ?? "gpt-4o-mini";
 
@@ -86,6 +87,45 @@ async function updatePRBody(body: string): Promise<void> {
 
 	if (!res.ok)
 		throw new Error(`Update PR failed: ${res.status} ${await res.text()}`);
+}
+
+async function setLabels(labels: string[]): Promise<void> {
+	if (labels.length === 0) return;
+	const res = await fetch(
+		`https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/labels`,
+		{
+			method: "PUT",
+			headers: ghHeaders(),
+			body: JSON.stringify({ labels }),
+		},
+	);
+	if (res.status === 403 || res.status === 422) {
+		console.warn(`Cannot set labels (${res.status}) — skipping.`);
+		console.warn(await res.text());
+		return;
+	}
+	if (!res.ok)
+		throw new Error(`Set labels failed: ${res.status} ${await res.text()}`);
+}
+
+async function setAssignee(login: string): Promise<void> {
+	const res = await fetch(
+		`https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/assignees`,
+		{
+			method: "POST",
+			headers: ghHeaders(),
+			body: JSON.stringify({ assignees: [login] }),
+		},
+	);
+	if (res.status === 403 || res.status === 422) {
+		console.warn(`Cannot set assignee (${res.status}) — skipping.`);
+		console.warn(await res.text());
+		return;
+	}
+	if (!res.ok)
+		throw new Error(
+			`Set assignee failed: ${res.status} ${await res.text()}`,
+		);
 }
 
 function commitSubject(message: string): string {
@@ -193,6 +233,62 @@ function inferTests(files: FileData[], commits: CommitData[]): string[] {
 		);
 
 	return tests;
+}
+
+function inferLabels(files: FileData[], commits: CommitData[]): string[] {
+	const labels: string[] = [];
+	const filenames = files.map((f) => f.filename);
+	const subjects = commits.map((c) =>
+		commitSubject(c.commit.message).toLowerCase(),
+	);
+	const allMessages = commits.map((c) => c.commit.message).join("\n");
+
+	// Type label — first match wins
+	if (
+		allMessages.includes("BREAKING CHANGE") ||
+		subjects.some((s) => /^[\w-]+![\s:(]/.test(s))
+	)
+		labels.push("breaking-change");
+	else if (subjects.some((s) => /^(feat|feature)[\s:(]/.test(s)))
+		labels.push("feat");
+	else if (subjects.some((s) => /^fix[\s:(]/.test(s))) labels.push("fix");
+	else if (subjects.some((s) => /^refactor[\s:(]/.test(s)))
+		labels.push("refactor");
+	else if (subjects.some((s) => /^(chore|ci|build|deps)[\s:(]/.test(s)))
+		labels.push("chore");
+	else if (filenames.every((f) => f.endsWith(".md") || f.startsWith("docs/")))
+		labels.push("docs");
+	else if (
+		filenames.every((f) => f.includes(".test.") || f.includes(".spec."))
+	)
+		labels.push("test");
+
+	// Size label
+	const totalLines = files.reduce(
+		(sum, f) => sum + f.additions + f.deletions,
+		0,
+	);
+	if (totalLines < 10) labels.push("size/XS");
+	else if (totalLines < 100) labels.push("size/S");
+	else if (totalLines < 500) labels.push("size/M");
+	else if (totalLines < 1000) labels.push("size/L");
+	else labels.push("size/XL");
+
+	// Risk labels (additive)
+	if (filenames.some((f) => f.includes("schema") || f.includes("migration")))
+		labels.push("db-migration");
+	if (
+		filenames.some(
+			(f) =>
+				f.toLowerCase().includes("dockerfile") ||
+				f.includes("docker-compose") ||
+				f.includes("nginx") ||
+				f.startsWith(".github/workflows"),
+		)
+	)
+		labels.push("infra");
+
+	return labels;
 }
 
 function buildDeterministicBody(
@@ -353,8 +449,16 @@ async function main(): Promise<void> {
 		console.log("No OPENAI_API_KEY — using deterministic generation.");
 	}
 
-	await updatePRBody(body);
-	console.log("PR description updated successfully.");
+	const labels = inferLabels(files, commits);
+	console.log(`Inferred labels: ${labels.join(", ") || "(none)"}`);
+
+	await Promise.all([
+		updatePRBody(body),
+		setLabels(labels),
+		...(PR_AUTHOR ? [setAssignee(PR_AUTHOR)] : []),
+	]);
+
+	console.log("PR description, labels, and assignee updated successfully.");
 }
 
 main().catch((err: unknown) => {

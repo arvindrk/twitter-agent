@@ -7,6 +7,7 @@ on:
 permissions:
     contents: read
     pull-requests: write
+    issues: write
 
 jobs:
     update-pr-description:
@@ -31,6 +32,7 @@ jobs:
                   GITHUB_REPOSITORY: ${{ github.repository }}
                   PR_NUMBER: ${{ github.event.pull_request.number }}
                   PR_TITLE: ${{ github.event.pull_request.title }}
+                  PR_AUTHOR: ${{ github.event.pull_request.user.login }}
                   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
                   PR_DESCRIPTION_MODEL: ${{ vars.PR_DESCRIPTION_MODEL }}
               run: bun scripts/generate-pr-description.ts
