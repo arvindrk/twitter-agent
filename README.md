@@ -92,6 +92,7 @@ bun run test:cron:execute-post
 | `X_ACCESS_TOKEN_SECRET` | OAuth1 access token secret                                                             |
 | `X_USER_ID`             | Numeric user ID — required for like, retweet, follow, and webhook self-event filtering |
 | `X_BEARER_TOKEN`        | App-only bearer token (thread context hydration)                                       |
+| `X_HANDLE`              | Agent's X handle without `@` — used to enforce the 1:1 thread depth cap                |
 | `DATABASE_URL`          | Neon Postgres connection string                                                        |
 | `CRON_SECRET`           | **Required.** Shared secret for `/cron/*` routes                                       |
 

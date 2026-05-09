@@ -22,6 +22,8 @@ type Mention = {
 	authorHandle: string;
 	text: string;
 	thread: Array<{ handle: string; text: string }>;
+	forceClose?: boolean;
+	agentReplies?: number;
 };
 
 let runInboundEngagementAgent: (mention: Mention) => Promise<unknown>;
