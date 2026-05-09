@@ -24,6 +24,35 @@ export interface XWebhookPayload {
 
 const SEP = "─".repeat(50);
 
+type ThreadMeta = {
+	agentReplies: number;
+	uniqueOthers: number;
+	forceClose: boolean;
+	skip: boolean;
+};
+
+export function computeThreadMeta(
+	thread: { handle: string; text: string }[],
+	agentHandle: string,
+): ThreadMeta {
+	const lc = agentHandle.toLowerCase();
+	const agentReplies = thread.filter(
+		(n) => n.handle.toLowerCase() === lc,
+	).length;
+	const uniqueOthers = new Set(
+		thread
+			.filter((n) => n.handle.toLowerCase() !== lc)
+			.map((n) => n.handle.toLowerCase()),
+	).size;
+	const is1on1 = uniqueOthers <= 1;
+	return {
+		agentReplies,
+		uniqueOthers,
+		forceClose: is1on1 && agentReplies === 2,
+		skip: is1on1 && agentReplies >= 3,
+	};
+}
+
 export async function processEngagementEvent(
 	payload: XWebhookPayload,
 ): Promise<void> {
@@ -71,12 +100,43 @@ export async function processEngagementEvent(
 			if (thread.length > 0)
 				console.log(`[engagement] thread: ${thread.length} node(s)`);
 
+			const agentHandle = process.env.X_HANDLE;
+			const threadMeta = agentHandle
+				? computeThreadMeta(thread, agentHandle)
+				: null;
+
+			if (threadMeta?.skip) {
+				console.log(
+					`[engagement] → 1:1 thread cap reached (agentReplies=${threadMeta.agentReplies}), skipping`,
+				);
+				await markEngagementSkipped(
+					tweet.id_str,
+					"1:1 thread cap reached",
+					false,
+				);
+				console.log(`[engagement] ${SEP}\n`);
+				continue;
+			}
+
 			const decision = await runInboundEngagementAgent({
 				tweetId: tweet.id_str,
 				authorHandle: tweet.user.screen_name,
 				text: tweet.text,
 				thread,
+				forceClose: threadMeta?.forceClose ?? false,
+				agentReplies: threadMeta?.agentReplies ?? 0,
 			});
+
+			if (
+				threadMeta?.forceClose &&
+				decision.reply !== null &&
+				decision.reply.stance === "probe"
+			) {
+				console.log(
+					`[engagement] → forceClose override: probe → close`,
+				);
+				decision.reply = { ...decision.reply, stance: "close" };
+			}
 
 			if (decision.like) {
 				await likeTweet(tweet.id_str).catch((err: unknown) => {

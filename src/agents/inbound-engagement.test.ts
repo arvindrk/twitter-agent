@@ -22,6 +22,8 @@ type Mention = {
 	authorHandle: string;
 	text: string;
 	thread: Array<{ handle: string; text: string }>;
+	forceClose?: boolean;
+	agentReplies?: number;
 };
 
 let runInboundEngagementAgent: (mention: Mention) => Promise<unknown>;
@@ -191,6 +193,42 @@ describe("runInboundEngagementAgent", () => {
 		expect(result.reply).toBeNull();
 		expect(result.like).toBe(true);
 		expect(result.reason).toContain("blocked");
+	});
+});
+
+describe("forceClose metadata", () => {
+	it("appends force-close instruction when forceClose=true", async () => {
+		await runInboundEngagementAgent({
+			tweetId: "10",
+			authorHandle: "user10",
+			text: "Another reply",
+			thread: [],
+			forceClose: true,
+			agentReplies: 2,
+		});
+		const calls = mockGenerateObject.mock.calls as unknown as Array<
+			[{ messages: Array<{ content: string }> }]
+		>;
+		const lastCall = calls[calls.length - 1][0];
+		const userMessage = lastCall.messages[0].content;
+		expect(userMessage).toContain("final reply");
+		expect(userMessage).toContain('"close"');
+		expect(userMessage).toContain("2");
+	});
+
+	it("does not append force-close instruction when forceClose is omitted", async () => {
+		await runInboundEngagementAgent({
+			tweetId: "11",
+			authorHandle: "user11",
+			text: "Normal reply",
+			thread: [],
+		});
+		const calls = mockGenerateObject.mock.calls as unknown as Array<
+			[{ messages: Array<{ content: string }> }]
+		>;
+		const lastCall = calls[calls.length - 1][0];
+		const userMessage = lastCall.messages[0].content;
+		expect(userMessage).not.toContain("final reply");
 	});
 });
 
