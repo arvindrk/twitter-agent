@@ -1,5 +1,39 @@
-import { describe, it, expect } from "bun:test";
-import { computeThreadMeta } from "./engagement.js";
+import { describe, it, expect, mock, beforeAll } from "bun:test";
+
+mock.module("../db/engagement.repo.js", () => ({
+	claimEngagement: async () => true,
+	markEngagementReplied: async () => {},
+	markEngagementSkipped: async () => {},
+	markEngagementFailed: async () => {},
+}));
+
+mock.module("../x/api.js", () => ({
+	replyToTweet: async () => ({ id: "reply-1" }),
+	likeTweet: async () => {},
+	fetchThreadContext: async () => [],
+}));
+
+mock.module("../agents/inbound-engagement.js", () => ({
+	runInboundEngagementAgent: async () => ({
+		like: false,
+		reply: null,
+		reason: "mocked",
+	}),
+}));
+
+let computeThreadMeta: (
+	thread: { handle: string; text: string }[],
+	agentHandle: string,
+) => {
+	agentReplies: number;
+	uniqueOthers: number;
+	forceClose: boolean;
+	skip: boolean;
+};
+
+beforeAll(async () => {
+	({ computeThreadMeta } = await import("./engagement.js"));
+});
 
 const T = (handle: string, text = "x") => ({ handle, text });
 
