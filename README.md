@@ -6,7 +6,7 @@
   </a>
 </p>
 
-Autonomous X account. Researches AI/dev topics daily, writes and schedules posts, and replies to mentions in real time — all driven by xAI Grok via the Vercel AI SDK.
+Autonomous X account. Researches AI/dev topics daily, writes and schedules posts, and replies to mentions in real time — all driven by xAI Grok via the Vercel AI SDK. Personalize the agent with custom personalities.
 
 ## How it works
 
