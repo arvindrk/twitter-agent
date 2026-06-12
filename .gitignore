@@ -3,6 +3,7 @@ node_modules/
 package-lock.json
 .env
 .env.keys
+context/
 
 *.pem
 AGENTS.md

@@ -1,5 +1,8 @@
 import { describe, it, expect, mock, beforeAll } from "bun:test";
-import { makePost, makeScheduleItem } from "./test/helpers.js";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { makePost, makeScheduleItem, stubEnv } from "./test/helpers.js";
 
 mock.module("./db/posts.repo.js", () => ({
 	insertScheduledPosts: async () => [{ id: 1 }],
@@ -21,9 +24,11 @@ mock.module("./agents/scheduler.js", () => ({
 }));
 
 let runDailyWorkflow: () => Promise<unknown[]>;
+let buildResearchPrompt: () => Promise<string>;
 
 beforeAll(async () => {
-	({ runDailyWorkflow } = await import("./services/pipeline.js"));
+	({ runDailyWorkflow, buildResearchPrompt } =
+		await import("./services/pipeline.js"));
 });
 
 describe("pipeline — merge logic", () => {
@@ -35,8 +40,7 @@ describe("pipeline — merge logic", () => {
 	});
 
 	it("drops scheduleItem when no matching post exists", async () => {
-		const { runWriter, runScheduler } =
-			(await import("./agents/writer.js")) as any;
+		const { runWriter } = (await import("./agents/writer.js")) as any;
 		runWriter.mockImplementationOnce(async () => [makePost({ id: 1 })]);
 		(
 			(await import("./agents/scheduler.js")) as any
@@ -50,8 +54,7 @@ describe("pipeline — merge logic", () => {
 	});
 
 	it("drops post when no matching scheduleItem exists", async () => {
-		const { runWriter, runScheduler } =
-			(await import("./agents/writer.js")) as any;
+		const { runWriter } = (await import("./agents/writer.js")) as any;
 		runWriter.mockImplementationOnce(async () => [
 			makePost({ id: 1 }),
 			makePost({ id: 2 }),
@@ -74,5 +77,25 @@ describe("pipeline — merge logic", () => {
 		).runScheduler.mockImplementationOnce(async () => []);
 		const result = await runDailyWorkflow();
 		expect(result).toHaveLength(0);
+	});
+
+	it("adds reviewed external context when RESEARCH_CONTEXT_FILE is set", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "twitter-agent-context-"));
+		const file = join(dir, "context.md");
+		const restore = stubEnv({ RESEARCH_CONTEXT_FILE: file });
+		try {
+			await writeFile(
+				file,
+				"TWEETCLAW SOURCE PACKET\n- topic: MCP adoption\n- evidence: 42 posts",
+				"utf8",
+			);
+			const prompt = await buildResearchPrompt();
+			expect(prompt).toContain("reviewed external context");
+			expect(prompt).toContain("TWEETCLAW SOURCE PACKET");
+			expect(prompt).toContain("Verify important claims");
+		} finally {
+			restore();
+			await rm(dir, { recursive: true, force: true });
+		}
 	});
 });

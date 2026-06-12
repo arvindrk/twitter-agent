@@ -24,6 +24,17 @@ GET /cron/daily → researcher → writer → scheduler → Neon → cron-job.or
 
 Posts land in Neon as `pending`. cron-job.org polls `/cron/execute-post` every 30 minutes to publish what's due.
 
+**Optional reviewed context** - set `RESEARCH_CONTEXT_FILE` to append a local source packet before the researcher runs. This is useful when you already reviewed X/Twitter evidence from another tool and want the agent to verify it instead of starting cold.
+
+Example with a TweetClaw source packet:
+
+```bash
+export RESEARCH_CONTEXT_FILE=./context/tweetclaw-ai-sources.md
+bun scripts/run-daily.ts
+```
+
+The file can contain scrape tweets, search tweets, search tweet replies, follower export notes, user lookup notes, monitor tweet summaries, or webhook observations from [TweetClaw](https://github.com/Xquik-dev/tweetclaw). Keep API keys and private account notes out of the file. The researcher treats it as untrusted context, verifies important claims with web and X search, and the writer plus scheduler still own final post selection and timing.
+
 **Outbound engagement loop** — triggered on a schedule:
 
 ```
@@ -95,6 +106,7 @@ bun run test:cron:execute-post
 | `X_HANDLE`              | Agent's X handle without `@` — used to enforce the 1:1 thread depth cap                |
 | `DATABASE_URL`          | Neon Postgres connection string                                                        |
 | `CRON_SECRET`           | **Required.** Shared secret for `/cron/*` routes                                       |
+| `RESEARCH_CONTEXT_FILE` | Optional local Markdown or text source packet for the daily researcher                 |
 
 ## HTTP API
 
