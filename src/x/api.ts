@@ -1,5 +1,3 @@
-import { xClient } from "./client.js";
-
 export interface ThreadNode {
 	handle: string;
 	text: string;
@@ -16,6 +14,21 @@ export interface SearchedTweet {
 }
 
 type XApiResponse = { data?: { id?: string } };
+
+type XquikTweetBody = {
+	account: string;
+	text: string;
+	reply_to_tweet_id?: string;
+};
+
+type XquikResponse = {
+	tweetId?: string;
+	writeActionId?: string;
+	error?: string;
+	message?: string;
+};
+
+type XClient = (typeof import("./client.js"))["xClient"];
 
 type TwitterApiData = {
 	data?: { text: string; referenced_tweets?: { type: string; id: string }[] };
@@ -44,6 +57,53 @@ function validateText(text: string, label: string): void {
 		throw new Error(`${label} exceeds 280 chars (${text.length})`);
 }
 
+function validateId(id: string, label: string): void {
+	if (!id.trim()) throw new Error(`${label} cannot be empty`);
+}
+
+async function getXClient(): Promise<XClient> {
+	return (await import("./client.js")).xClient;
+}
+
+function selectedWriteBackend(): "x" | "xquik" {
+	const backend = process.env.TWITTER_BACKEND?.trim().toLowerCase() || "x";
+	if (backend !== "x" && backend !== "xquik") {
+		throw new Error(
+			`Unsupported TWITTER_BACKEND: ${backend}. Use x or xquik`,
+		);
+	}
+	return backend;
+}
+
+function requiredEnv(name: string): string {
+	const value = process.env[name]?.trim();
+	if (!value) throw new Error(`Missing env var: ${name}`);
+	return value;
+}
+
+function xquikBaseUrl(): string {
+	const configured = process.env.XQUIK_BASE_URL?.trim();
+	return (configured || "https://xquik.com/api/v1").replace(/\/+$/, "");
+}
+
+function optionalString(value: unknown): string | undefined {
+	return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+async function readXquikResponse(response: Response): Promise<XquikResponse> {
+	const value: unknown = await response.json().catch(() => undefined);
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return {};
+	}
+	const record = value as Record<string, unknown>;
+	return {
+		tweetId: optionalString(record.tweetId),
+		writeActionId: optionalString(record.writeActionId),
+		error: optionalString(record.error),
+		message: optionalString(record.message),
+	};
+}
+
 function extractId(response: unknown): string {
 	const id = (response as XApiResponse)?.data?.id;
 	if (!id)
@@ -53,9 +113,53 @@ function extractId(response: unknown): string {
 	return id;
 }
 
+async function createXquikTweet(
+	text: string,
+	replyToTweetId?: string,
+): Promise<{ id: string }> {
+	const baseUrl = xquikBaseUrl();
+	const body: XquikTweetBody = {
+		account: requiredEnv("XQUIK_ACCOUNT"),
+		text,
+	};
+	if (replyToTweetId) body.reply_to_tweet_id = replyToTweetId;
+
+	const response = await fetch(`${baseUrl}/x/tweets`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"x-api-key": requiredEnv("XQUIK_API_KEY"),
+		},
+		body: JSON.stringify(body),
+	});
+	const data = await readXquikResponse(response);
+	if (response.status === 202) {
+		const statusUrl = data.writeActionId
+			? ` Poll ${baseUrl}/x/write-actions/${encodeURIComponent(data.writeActionId)}.`
+			: "";
+		throw new Error(
+			`Xquik write is pending confirmation.${statusUrl} Do not retry the write`,
+		);
+	}
+	if (!response.ok) {
+		const detail = data.message ?? data.error ?? "";
+		throw new Error(
+			`Xquik returned HTTP ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+		);
+	}
+
+	if (!data.tweetId) throw new Error("Xquik returned no tweet id");
+	return { id: data.tweetId };
+}
+
 export async function publishTweet(text: string): Promise<{ id: string }> {
 	validateText(text, "Tweet text");
+	if (selectedWriteBackend() === "xquik") {
+		return createXquikTweet(text);
+	}
+
 	console.log(`[x] Publishing tweet (${text.length} chars)...`);
+	const xClient = await getXClient();
 	const id = extractId(await xClient.posts.create({ text }));
 	console.log(`[x] Published tweet ${id}`);
 	return { id };
@@ -65,10 +169,16 @@ export async function replyToTweet(
 	inReplyToTweetId: string,
 	text: string,
 ): Promise<{ id: string }> {
+	validateId(inReplyToTweetId, "Reply tweet ID");
 	validateText(text, "Reply text");
+	if (selectedWriteBackend() === "xquik") {
+		return createXquikTweet(text, inReplyToTweetId);
+	}
+
 	console.log(
 		`[x] Replying to ${inReplyToTweetId} (${text.length} chars)...`,
 	);
+	const xClient = await getXClient();
 	const id = extractId(
 		await xClient.posts.create({
 			text,
@@ -83,6 +193,7 @@ export async function likeTweet(tweetId: string): Promise<void> {
 	const userId = process.env.X_USER_ID;
 	if (!userId) throw new Error("Missing env var: X_USER_ID");
 	console.log(`[x] Liking tweet ${tweetId}...`);
+	const xClient = await getXClient();
 	await xClient.users.likePost(userId, { body: { tweetId } } as Parameters<
 		typeof xClient.users.likePost
 	>[1]);
@@ -95,6 +206,7 @@ export async function searchTweets(
 ): Promise<SearchedTweet[]> {
 	try {
 		console.log(`[x] Searching tweets: "${query}" (max ${maxResults})...`);
+		const xClient = await getXClient();
 		const raw = await xClient.posts.searchRecent(query, {
 			query: {
 				expansions: "author_id",
@@ -128,6 +240,7 @@ export async function followUser(targetUserId: string): Promise<void> {
 	const userId = process.env.X_USER_ID;
 	if (!userId) throw new Error("Missing env var: X_USER_ID");
 	console.log(`[x] Following user ${targetUserId}...`);
+	const xClient = await getXClient();
 	await xClient.users.followUser(userId, {
 		body: { targetUserId },
 	} as Parameters<typeof xClient.users.followUser>[1]);
@@ -138,6 +251,7 @@ export async function retweetPost(tweetId: string): Promise<void> {
 	const userId = process.env.X_USER_ID;
 	if (!userId) throw new Error("Missing env var: X_USER_ID");
 	console.log(`[x] Retweeting tweet ${tweetId}...`);
+	const xClient = await getXClient();
 	await xClient.users.repostPost(userId, { body: { tweetId } } as Parameters<
 		typeof xClient.users.repostPost
 	>[1]);
@@ -149,6 +263,7 @@ export async function getHomeFeed(maxResults = 50): Promise<SearchedTweet[]> {
 	if (!userId) return [];
 	try {
 		console.log(`[x] Fetching home feed (max ${maxResults})...`);
+		const xClient = await getXClient();
 		const raw = await xClient.users.getTimeline(userId, {
 			expansions: ["author_id"],
 			userFields: ["username", "public_metrics"],
@@ -181,6 +296,7 @@ export async function getFollowingHandles(limit = 100): Promise<string[]> {
 	if (!userId) return [];
 	try {
 		console.log(`[x] Fetching following list (limit ${limit})...`);
+		const xClient = await getXClient();
 		const raw = await xClient.users.getFollowing(userId, {
 			query: { max_results: limit },
 		} as Parameters<typeof xClient.users.getFollowing>[1]);
